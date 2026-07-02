@@ -19,7 +19,7 @@ JSON_DIR = os.path.join(BASE, "jsons")
 
 def order_from_name(path):
     m = re.search(r'(\d{4,}(?:-\d+)?)', os.path.basename(path))
-    return m.group(1) if m else os.path.splitext(os.path.basename(path))[0]
+    return m.group(1) if m else "0000"
 
 
 for fbx in glob.glob(os.path.join(FBX_DIR, "*.fbx")):

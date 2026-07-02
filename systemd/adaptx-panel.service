@@ -1,0 +1,23 @@
+[Unit]
+Description=Adaptx Panel — web izleme paneli (http://192.168.1.111:8080)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/adaptx
+Environment=ADAPTX_BASE=/opt/adaptx
+ExecStart=/usr/bin/python3 /opt/adaptx/panel.py
+Restart=always
+RestartSec=3
+# Panel boru hattina asla yazamasin: dosya sistemi salt-okunur, tek istisna data/
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/adaptx/data
+# Tek cekirdegi Blender'a birak
+Nice=10
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target
