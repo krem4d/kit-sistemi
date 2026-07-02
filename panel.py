@@ -27,9 +27,8 @@ from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # ---------------------------------------------------------------- AYARLAR ---
-# Checklist adımları: TEK değişiklik noktası. Adım ekle/çıkar/yeniden adlandır;
-# eski kayıtlar dosyada korunur, ilerleme güncel listeye göre hesaplanır.
-CHECKLIST_ADIMLARI = ["Kontrol Edildi", "Paket Hazırlandı", "Teslim Edildi"]
+# Checklist artık sabit adımlar değil, siparişin KENDİ parçalarına göre otomatik
+# oluşur (bkz. parca_anahtarlari) — burada değiştirilecek bir liste yok.
 
 HOST = "0.0.0.0"
 PORT = int(os.environ.get("PANEL_PORT") or 8080)
@@ -103,20 +102,34 @@ def _cl_kaydet():
         raise
 
 
-def checklist_degistir(no, adim, durum):
-    """Bir adımı işaretle/kaldır; sunucu gerçeğini (adım→zaman) döndürür."""
+def parca_anahtarlari(veri):
+    """Bir siparişin işaretlenebilir parça anahtarları: nonzero `adet` anahtarları +
+    nonzero `ray_setleri` anahtarları (çakışmayı önlemek için "ray:" önekiyle).
+    Tek doğruluk kaynağı: hem checklist doğrulamasında hem özetinde kullanılır."""
+    if not veri:
+        return []
+    anahtarlar = [k for k, v in (veri.get("adet") or {}).items() if v]
+    anahtarlar += ["ray:" + str(k) for k, v in (veri.get("ray_setleri") or {}).items() if v]
+    return anahtarlar
+
+
+def checklist_degistir(no, parca, durum):
+    """Bir parçayı işaretle/kaldır; sunucu gerçeğini (parça→zaman) döndürür."""
     with _cl_kilit:
         kayit = _cl_veri.setdefault(no, {})
-        kayit[adim] = datetime.now(IST).isoformat(timespec="seconds") if durum else None
+        kayit[parca] = datetime.now(IST).isoformat(timespec="seconds") if durum else None
         _cl_kaydet()
         return dict(kayit)
 
 
-def checklist_ozeti(no):
-    """Güncel adım listesine göre (bool listesi, tamam sayısı)."""
+def checklist_ozeti(no, veri):
+    """Siparişin GÜNCEL parça listesine göre (checklist sözlüğü, tamam, toplam).
+    Kilidi kendi almaz — çağıran _cl_kilit'i tutuyor olmalı (bkz. durum_yaniti)."""
     kayit = _cl_veri.get(no) or {}
-    durumlar = [bool(kayit.get(a)) for a in CHECKLIST_ADIMLARI]
-    return durumlar, sum(durumlar)
+    parcalar = parca_anahtarlari(veri)
+    checklist = {p: kayit.get(p) for p in parcalar}
+    tamam = sum(1 for v in checklist.values() if v)
+    return checklist, tamam, len(parcalar)
 
 
 # ------------------------------------------------------- YARDIMCI KOMUTLAR ---
@@ -270,17 +283,10 @@ def siparis_okumasi():
             if no in idx_map and k["durum"] == "islendi":
                 k["ozet_no"] = idx_map[no] // OZET_BASINA + 1
 
-        # 5) Görüntüleme sırası: sorunlular önce, sonra en yeni işlenen
-        oncelik = {"hatali": 0, "isleniyor": 1, "bekliyor": 2}
-        sorunlu = sorted((n for n, k in kayitlar.items() if k["durum"] != "islendi"),
-                         key=lambda n: (oncelik[kayitlar[n]["durum"]],
-                                        tuple(-x for x in _no_sirala(n))))
-        islenmis = [no for no in reversed(siralama) if no in kayitlar
-                    and kayitlar[no]["durum"] == "islendi"]
-        gorunen = set(sorunlu) | set(islenmis)
-        artakalan = sorted((n for n, k in kayitlar.items() if n not in gorunen),
-                           key=_no_sirala, reverse=True)
-        sirali = sorunlu + islenmis + artakalan
+        # 5) Görüntüleme sırası: sipariş no'suna göre artan (kullanıcı isteği — önceki
+        # "sorunlu önce" önceliklendirmesi kaldırıldı; frontend gerekirse yön toggle'ıyla
+        # tersine çevirir).
+        sirali = sorted(kayitlar, key=_no_sirala)
 
         sonuc = {"kayitlar": kayitlar, "sirali": sirali,
                  "no_suz_fbx": sorted(no_suz), "son_fbx": son_fbx}
@@ -385,7 +391,9 @@ def sistem_durumu():
 
 # ------------------------------------------------------------ API GÖVDESİ ---
 def durum_yaniti():
-    """GET /api/durum gövdesi: sistem + sayaçlar + tüm sipariş satırları."""
+    """GET /api/durum gövdesi: sistem + sayaçlar + tüm siparişlerin TAM detayı (kart
+    ızgarası artık her siparişi her zaman açık gösterdiği için ayrı /api/siparis
+    çağrılarına gerek kalmadan tek yanıtta gelir — 292 sipariş için bile küçük payload)."""
     sistem = dict(sistem_durumu())
     okuma = siparis_okumasi()
     kayitlar, sirali = okuma["kayitlar"], okuma["sirali"]
@@ -397,39 +405,42 @@ def durum_yaniti():
     with _cl_kilit:
         for no in sirali:
             k = kayitlar[no]
-            durumlar, tamam = checklist_ozeti(no)
-            satirlar.append({"no": no, "durum": k["durum"], "parca": k["parca"],
-                             "pdf": k["pdf"], "ozet_no": k["ozet_no"],
-                             "zaman": k["zaman"], "checklist": durumlar,
-                             "tamam": tamam})
+            veri = k["data"] or {}
+            checklist, tamam, toplam = checklist_ozeti(no, veri)
+            satirlar.append({
+                "no": no, "durum": k["durum"], "parca": k["parca"],
+                "pdf": k["pdf"], "ozet_no": k["ozet_no"], "zaman": k["zaman"],
+                "adet": veri.get("adet") or {}, "gram": veri.get("gram") or {},
+                "ray_setleri": veri.get("ray_setleri") or {},
+                "checklist": checklist, "tamam": tamam, "toplam": toplam,
+            })
             sayac["toplam"] += 1
             sayac["pdf"] += 1 if k["pdf"] else 0
-            if tamam == len(CHECKLIST_ADIMLARI):
+            if toplam > 0 and tamam == toplam:
                 sayac["tamamlanan"] += 1
             anahtar = {"islendi": "islendi", "bekliyor": "bekleyen",
                        "isleniyor": "isleniyor", "hatali": "hatali"}[k["durum"]]
             sayac[anahtar] += 1
 
-    return {"zaman": int(time.time()), "sistem": sistem,
-            "adimlar": CHECKLIST_ADIMLARI, "sayac": sayac, "siparisler": satirlar}
+    return {"zaman": int(time.time()), "sistem": sistem, "sayac": sayac, "siparisler": satirlar}
 
 
 def siparis_yaniti(no, ham_goster=False):
-    """GET /api/siparis/<no> gövdesi; yoksa None."""
+    """GET /api/siparis/<no> gövdesi; yoksa None. Artık kart render'ı için birincil
+    kaynak değil (/api/durum tam detayı zaten içeriyor) — ham/debug görünüm için kalır."""
     okuma = siparis_okumasi()
     k = okuma["kayitlar"].get(no)
     if k is None:
         return None
     veri = k["data"] or {}
     with _cl_kilit:
-        kayit = _cl_veri.get(no) or {}
-        checklist = {a: kayit.get(a) for a in CHECKLIST_ADIMLARI}
+        checklist, tamam, toplam = checklist_ozeti(no, veri)
     yanit = {
         "no": no, "durum": k["durum"], "parca_sayisi": veri.get("parca_sayisi"),
         "adet": veri.get("adet") or {}, "gram": veri.get("gram") or {},
         "ray_setleri": veri.get("ray_setleri") or {},
         "fbx": k["fbx"], "pdf": k["pdf"], "ozet_no": k["ozet_no"],
-        "zaman": k["zaman"], "checklist": checklist,
+        "zaman": k["zaman"], "checklist": checklist, "tamam": tamam, "toplam": toplam,
     }
     if ham_goster:
         yanit["ham"] = {a: veri.get(a) for a in ("_ham", "_kulp", "_raylar", "_uzun_linco")}
@@ -579,25 +590,29 @@ class PanelIstek(BaseHTTPRequestHandler):
                 if not 0 < uzunluk <= 4096:
                     return self._json(400, {"hata": "geçersiz istek gövdesi"})
                 try:
-                    veri = json.loads(self.rfile.read(uzunluk))
+                    govde = json.loads(self.rfile.read(uzunluk))
                 except Exception:
                     return self._json(400, {"hata": "JSON çözümlenemedi"})
-                no = str(veri.get("siparis") or "")
-                adim = veri.get("adim")
-                durum = veri.get("durum")
+                no = str(govde.get("siparis") or "")
+                parca = govde.get("parca")
+                durum = govde.get("durum")
                 if not ORDER_RX.fullmatch(no):
                     return self._json(400, {"hata": "geçersiz sipariş no"})
-                if adim not in CHECKLIST_ADIMLARI:
-                    return self._json(400, {"hata": "bilinmeyen adım"})
+                kayit_sip = siparis_okumasi()["kayitlar"].get(no)
+                if kayit_sip is None:
+                    return self._json(404, {"hata": "sipariş bulunamadı"})
+                if not kayit_sip["data"]:
+                    return self._json(400, {"hata": "sipariş henüz işlenmedi"})
+                gecerli = parca_anahtarlari(kayit_sip["data"])
+                if parca not in gecerli:
+                    return self._json(400, {"hata": "geçersiz parça"})
                 if not isinstance(durum, bool):
                     return self._json(400, {"hata": "durum true/false olmalı"})
-                if no not in siparis_okumasi()["kayitlar"]:
-                    return self._json(404, {"hata": "sipariş bulunamadı"})
-                kayit = checklist_degistir(no, adim, durum)
-                tamam = sum(1 for a in CHECKLIST_ADIMLARI if kayit.get(a))
-                return self._json(200, {"ok": True, "siparis": no,
-                                        "checklist": {a: kayit.get(a) for a in CHECKLIST_ADIMLARI},
-                                        "tamam": tamam})
+                kayit = checklist_degistir(no, parca, durum)
+                checklist = {p: kayit.get(p) for p in gecerli}
+                tamam = sum(1 for v in checklist.values() if v)
+                return self._json(200, {"ok": True, "siparis": no, "checklist": checklist,
+                                        "tamam": tamam, "toplam": len(gecerli)})
 
             return self._json(405, {"hata": "yöntem desteklenmiyor"})
         except (BrokenPipeError, ConnectionResetError):

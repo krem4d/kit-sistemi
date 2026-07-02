@@ -50,25 +50,35 @@ journalctl -u adaptx-panel.service -f     # canlı log (30 sn'lik durum/sağlık
                                            # yalnızca gerçek istekler/hatalar görünür)
 ```
 
-## 4) Checklist adımlarını değiştirme
+## 4) Checklist modeli
 
-`panel.py` dosyasının en üstünde **tek satır**:
+Checklist artık sabit adımlar değil — her siparişin **kendi içindeki küçük
+parçalarına** göre otomatik oluşur: o siparişte miktarı sıfırdan büyük olan
+her `adet` kalemi (Linco Gövde, Kulp, Menteşe Tabanı, …) ve her aktif ray
+seti için ayrı bir checkbox gösterilir. Değiştirilecek bir konfig listesi
+yok — kaynak `jsons/<no>.json` değiştikçe checkbox listesi otomatik
+güncellenir (`panel.py`'deki `parca_anahtarlari()` fonksiyonu).
 
-```python
-CHECKLIST_ADIMLARI = ["Kontrol Edildi", "Paket Hazırlandı", "Teslim Edildi"]
-```
+Sipariş "tamamlandı" sayılması = o siparişteki tüm parçaların işaretlenmiş
+olması (`tamam == toplam`, `toplam > 0`). Ayrı bir "teslim edildi" adımı
+yok; istenirse ileride eklenebilir.
 
-Adım ekle/çıkar/yeniden adlandır, kaydet, sonra:
+Eski kayıtlar (`data/panel_checklist.json`) parça anahtarına göre saklanır;
+bir parça sonradan siparişten kalkarsa (miktar 0'a düşerse) o parçaya ait
+eski işaret sessizce yok sayılır, dosyadan silinmez.
 
-```bash
-systemctl restart adaptx-panel.service
-```
+## 5) Görünüm — sekme-kart ızgarası + karanlık temalar
 
-Eski adım adlarıyla kaydedilmiş ilerleme `data/panel_checklist.json` içinde
-silinmeden korunur (yalnızca güncel listedeki adımlar sayılır); bir adımı
-yeniden eski adıyla geri eklersen kaldığı yerden devam eder.
+Her sipariş, her zaman açık (tıklayıp genişletmeye gerek yok) bir "sekme
+kartı" olarak gösterilir; kartlar sipariş no'suna göre sıralanır (araç
+çubuğundaki ↑/↓ butonuyla yön değiştirilebilir). Üstteki ince şerit tüm
+sipariş no'larına hızlı atlama sağlar.
 
-## 5) Checklist verisini sıfırlama
+4 tema mevcuttur (başlıktaki küçük renkli daireler): **Uzay** (varsayılan),
+**Karbon**, **Okyanus**, **Açık**. Seçim tarayıcının `localStorage`'ında
+saklanır, sunucuya yazılmaz — her kullanıcı kendi tercihini seçer.
+
+## 6) Checklist verisini sıfırlama
 
 ```bash
 systemctl stop adaptx-panel.service
@@ -80,7 +90,7 @@ Dosya bozulursa (ör. elektrik kesintisi sırasında yarım kalmış yazım) pan
 onu silmez; `panel_checklist.json.bozuk-<zaman>` olarak kenara ayırıp sıfırdan
 başlar — kanıt kaybolmaz, `data/` klasörüne bakıp elle kurtarabilirsin.
 
-## 6) Bağımlılık / kaynak notları
+## 7) Bağımlılık / kaynak notları
 
 - Python 3.13, sadece standart kütüphane (`http.server.ThreadingHTTPServer`).
   Bu CT'de `pip` kurulu değil (externally-managed Debian) — bu yüzden Flask
@@ -95,7 +105,7 @@ başlar — kanıt kaybolmaz, `data/` klasörüne bakıp elle kurtarabilirsin.
   uyan istekler dosya sistemine dokunur — path traversal denemeleri sunucu
   tarafında engellenir.
 
-## 7) Yol uyumu
+## 8) Yol uyumu
 
 `ADAPTX_BASE` diğer servislerle aynı mantığı kullanır (SERVIS.md'ye bakınız):
 panel `ADAPTX_BASE=/opt/adaptx` altındaki `fbx/`, `jsons/`, `pdf/`,
