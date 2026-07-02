@@ -1,0 +1,13 @@
+[Unit]
+Description=Adaptx Otonom Kit — sipariş sayım turu (FBX -> PDF)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Repoyu başka yere klonladıysan bu iki yolu ona göre değiştir:
+WorkingDirectory=/opt/adaptx
+Environment=ADAPTX_BASE=/opt/adaptx
+ExecStart=/usr/bin/bash /opt/adaptx/servis_bir_tur.sh
+# Aynı anda tek tur (timer tur bitmeden yeniden tetiklemez)
+TimeoutStartSec=1800

@@ -1,0 +1,13 @@
+[Unit]
+Description=Adaptx Otonom Kit — 5 dakikada bir sayım turu
+
+[Timer]
+# Açılıştan 2 dk sonra ilk tur, sonra her turun bitiminden 5 dk sonra tekrar.
+# OnUnitActiveSec turun BİTİŞİNE göre saydığı için turlar çakışmaz.
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
