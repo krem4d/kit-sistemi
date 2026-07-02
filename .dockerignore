@@ -1,0 +1,20 @@
+# Görüntüye gereksiz/büyük dosyaları KOPYALAMA (veri /data'ya mount edilir)
+data/
+fbx/
+jsons/
+pdf/
+*.blend
+*.blend1
+__pycache__/
+*.pyc
+*_raporu.txt
+islem_gecmisi.json
+
+# Teşhis araçları ve dokümanlar konteynerde gerekmez
+hacim_bul.py
+kalinlik_bul.py
+kulp_mesafe_bul.py
+linco_mesafe_bul.py
+linco_uzun_pim_teshis.py
+delikbulma.py
+*.md

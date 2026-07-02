@@ -1,0 +1,18 @@
+services:
+  adaptx:
+    build:
+      context: .
+      args:
+        # Yerel Blender sürümünüzle eşleştirmek isterseniz burayı değiştirin
+        BLENDER_MAJOR: "4.2"
+        BLENDER_VERSION: "4.2.3"
+    image: adaptx-otonom-kit:latest
+    container_name: adaptx-otonom-kit
+    restart: unless-stopped
+    environment:
+      ADAPTX_BASE: /data          # konteyner içi statik yol (değiştirmeyin)
+      POLL_INTERVAL: "300"        # kontrol aralığı (saniye) — 5 dakika
+    volumes:
+      # SOL taraf host yolu (her makinede farklı olabilir), SAĞ taraf sabit /data.
+      # fbx/ jsons/ pdf/ alt klasörleri otomatik oluşturulur.
+      - ./data:/data

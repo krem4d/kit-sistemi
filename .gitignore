@@ -1,0 +1,28 @@
+# ── Veri ve çıktılar (repoya girmez) ────────────────────────────────────────
+# Docker bind-mount veri kökü
+data/
+# sipariş modelleri (müşteri verisi, büyük)
+fbx/
+# üretilen ara çıktılar
+jsons/
+# üretilen PDF'ler
+pdf/
+# servis belleği (işlenme sırası)
+islem_gecmisi.json
+
+# ── Blender dosyaları (büyük) ────────────────────────────────────────────────
+*.blend
+*.blend1
+
+# ── Teşhis araçlarının metin çıktıları ───────────────────────────────────────
+*_raporu.txt
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+
+# ── Editör / OS ──────────────────────────────────────────────────────────────
+.DS_Store
+*.swp
+.~lock.*#
