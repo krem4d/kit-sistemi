@@ -247,7 +247,7 @@ header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:
 .yigin::-webkit-scrollbar{height:10px;}
 .yigin::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px;}
 #yiginSpacer{height:1px;}
-.yigin-sekme{display:flex;align-items:stretch;position:absolute;top:0;bottom:0;width:min(452px,88vw);background:var(--surface);border-left:1px solid var(--line);box-shadow:-6px 0 12px rgba(0,0,0,.18);}
+.yigin-sekme{display:flex;align-items:stretch;position:absolute;top:0;bottom:0;width:min(452px,88vw);background:var(--surface);border-left:1px solid var(--line);box-shadow:-4px 0 10px rgba(0,0,0,.22);contain:layout paint;will-change:transform;}
 .yigin-sekme[hidden]{display:none;}
 .yigin-serit{flex:none;width:36px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;background:var(--surface);border:none;border-right:1px solid var(--line);cursor:pointer;user-select:none;color:inherit;font-family:inherit;}
 .yigin-serit:hover{background:rgba(var(--accent-rgb),.12);}
@@ -256,7 +256,9 @@ header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:
 .serit-no{writing-mode:vertical-rl;font-size:13px;font-weight:800;letter-spacing:.1em;color:var(--tx-1);white-space:nowrap;}
 .serit-ilerleme{writing-mode:vertical-rl;font-size:10px;font-weight:700;color:var(--muted);margin-top:auto;}
 .yigin-sekme.kart-tamam .serit-ilerleme{color:var(--good);}
-.yigin-panel{flex:1;min-width:0;background:var(--surface);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+/* margin-right = SERIT_W: açık panolar adim (panelW - SERIT_W) aralıklı dizilir;
+   bu boşluk olmadan bir sonraki panonun şeridi bu panonun checkbox sütununa biner. */
+.yigin-panel{flex:1;min-width:0;margin-right:36px;background:var(--surface);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
 .yigin-panel::-webkit-scrollbar{width:8px;}
 .yigin-panel::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px;}
 .yigin-bos{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:15px;}
@@ -282,8 +284,14 @@ header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:
 .parca-zaman{font-size:10px;white-space:nowrap;min-width:58px;text-align:right;}
 .parca-satir input[type=checkbox]{width:24px;height:24px;accent-color:var(--accent);cursor:pointer;flex:none;}
 
-.kart-tumunu{width:100%;margin:8px 0 12px;padding:8px;border-radius:var(--radius-sm);border:1px dashed var(--border);background:transparent;color:var(--ink-2);font-size:12px;font-weight:700;cursor:pointer;}
+.kart-tumunu{width:100%;margin:8px 0 4px;padding:8px;border-radius:var(--radius-sm);border:1px dashed var(--border);background:transparent;color:var(--ink-2);font-size:12px;font-weight:700;cursor:pointer;}
 .kart-tumunu:hover{border-color:var(--accent);color:var(--accent);}
+
+.not-bolum{margin:8px 0 12px;}
+.not-ust{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.not-kutu{display:block;width:100%;min-height:38px;max-height:140px;resize:vertical;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--page);color:var(--ink);font-family:inherit;font-size:12px;line-height:1.45;}
+.not-kutu:focus{border-color:var(--accent);outline:none;}
+.not-kutu::placeholder{color:var(--muted);}
 
 .ilerleme-metin{font-size:12px;font-weight:800;color:var(--ink-2);}
 .ilerleme-bar{display:inline-block;width:52px;height:6px;border-radius:var(--radius-pill);background:var(--accent-100);overflow:hidden;vertical-align:middle;margin-left:6px;}
@@ -384,6 +392,11 @@ const checklistMap = {};   /* no -> {parca: iso|null} — sunucudan sürekli bes
 const ucusta = new Set();  /* "no|parca" — yalnızca POST uçuştayken geçersiz kılma sinyali */
 const kartNodeMap = new Map();
 const stripNodeMap = new Map();
+const notMap = {};         /* no -> {metin, zaman} — sipariş notlarının yerel önbelleği */
+const notBekleyen = {};    /* no -> kaydedilmeyi bekleyen metin */
+const notTimer = {};
+const notUcusta = new Set();
+let notDuzenleniyor = null; /* şu an yazılan siparişin no'su — poll o notu ezmesin */
 
 function esc(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -536,13 +549,32 @@ function yiginKaydir(){
   const S = SERIT_W, K = yiginK;
   const vw = yigin.clientWidth, sl = yigin.scrollLeft;
   const cur = sl / yiginAdim;   /* kaydırma konumunun pano indeksi karşılığı (kesirli) */
-  for (let i = 0; i < n; i++){
+  /* Performans: istiflerde tamamen örtülen paneller (üstündeki panel aynı
+     hizada) visibility:hidden yapılır — tarayıcı ~290 yerine yalnızca
+     görünür ~15-20 paneli boyar. Yazımlar önbelleklenir: değer değişmediyse
+     DOM'a dokunulmaz (gizli panellerin dx'i her karede değişir ama görünmez
+     oldukları için transform yazmak gereksizdir). Sağdan sola gezilir ki bir
+     sonraki panelin konumu örtülme tespitinde kullanılabilsin. */
+  let sonrakiX = Infinity;
+  for (let i = n - 1; i >= 0; i--){
+    const node = yiginNodlar[i];
     const dogal = yiginTaban(i) - sl;
     const sol = Math.max(0, Math.min(i - cur + K, K, i)) * S;
     let sag = vw - Math.min(Math.max(K - (i - cur) + 1, 1), K, n - i) * S;
     if (sag < sol) sag = sol;
     const x = Math.max(sol, Math.min(dogal, sag));
-    yiginNodlar[i].style.transform = (x === dogal) ? '' : ('translateX(' + (x - dogal) + 'px)');
+    const gizli = sonrakiX - x < 0.5;
+    if (gizli){
+      if (!node._gizli){ node.style.visibility = 'hidden'; node._gizli = true; }
+    } else {
+      if (node._gizli){ node.style.visibility = ''; node._gizli = false; }
+      const dx = x - dogal;
+      if (node._dx !== dx){
+        node.style.transform = dx ? ('translateX(' + dx + 'px)') : '';
+        node._dx = dx;
+      }
+    }
+    sonrakiX = x;
   }
 }
 function sekmeyeGit(no){
@@ -562,6 +594,9 @@ function siparisMerge(d){
     }
     for (const [k, v] of Object.entries(r.checklist)){
       if (!ucusta.has(r.no+'|'+k)) hedef[k] = v;
+    }
+    if (notDuzenleniyor !== r.no && !notUcusta.has(r.no)){
+      notMap[r.no] = {metin: r.not_metin || '', zaman: r.not_zaman || null};
     }
   }
 }
@@ -607,8 +642,13 @@ function checklistImzaParcasi(no){
 function dictImza(d){
   return Object.entries(d||{}).filter(([,v])=>v).sort((a,b)=>a[0]<b[0]?-1:1).map(([k,v])=>k+':'+v).join(',');
 }
+function notImzaParcasi(no){
+  if (notDuzenleniyor === no || notUcusta.has(no)) return '~duzenleniyor';
+  const m = notMap[no];
+  return m ? (m.metin + '@' + (m.zaman || '')) : '';
+}
 function siparisImza(o){
-  return [o.durum, o.pdf?1:0, o.ozet_no??'', dictImza(o.adet), dictImza(o.gram), dictImza(o.ray_setleri), checklistImzaParcasi(o.no)].join('|');
+  return [o.durum, o.pdf?1:0, o.ozet_no??'', dictImza(o.adet), dictImza(o.gram), dictImza(o.ray_setleri), checklistImzaParcasi(o.no), notImzaParcasi(o.no)].join('|');
 }
 function stripImza(o){
   const {tamam,toplam} = kartTamamToplam(o);
@@ -661,21 +701,34 @@ function kartBaslikHtml(o, tamam, toplam){
     + '<span class="badge badge-'+m.sinif+'"><span class="dot"></span>'+esc(m.etiket)+'</span>'
     + '<span class="kart-baslik-sag">'+ilerlemeHtml(tamam,toplam)+pdfBtn+ozetBtn+'</span>';
 }
+function notBolumHtml(no){
+  const m = notMap[no] || {metin:'', zaman:null};
+  return '<div class="not-bolum">'
+    + '<div class="not-ust"><span>Not</span><span class="not-durum">'+(m.zaman ? 'Kaydedildi '+isoStr(m.zaman) : '')+'</span></div>'
+    + '<textarea class="not-kutu" data-no="'+esc(no)+'" rows="2" maxlength="4000" placeholder="Bu siparişle ilgili not bırak…">'+esc(m.metin)+'</textarea>'
+    + '</div>';
+}
 function kartGovdeHtml(o){
+  let icerik;
   if (o.durum !== 'islendi'){
     const mesajlar = {
       bekliyor:'Bu sipariş henüz işlenmedi; bir sonraki turda Blender tarafından sayılacak.',
       isleniyor:'Bu sipariş şu anda işleniyor olabilir. Birazdan tekrar kontrol edin.',
       hatali:'Bu siparişin JSON dosyası boş veya bozuk görünüyor. Elle kontrol gerekebilir.',
     };
-    return '<p class="kart-durum-mesaj muted">'+esc(mesajlar[o.durum] || 'Durum bilinmiyor.')+'</p>';
+    icerik = '<p class="kart-durum-mesaj muted">'+esc(mesajlar[o.durum] || 'Durum bilinmiyor.')+'</p>';
+  } else {
+    const satirlar = parcaSatirlari(o);
+    if (satirlar.length === 0){
+      icerik = '<p class="kart-durum-mesaj muted">Bu siparişte işaretlenecek parça yok.</p>';
+    } else {
+      const veri = checklistMap[o.no] || {};
+      const kalanVar = satirlar.some(s => !veri[s.key]);
+      icerik = satirlar.map(s => parcaSatirHtml(o.no, s)).join('')
+        + (kalanVar ? '<button class="kart-tumunu" type="button" data-no="'+esc(o.no)+'">Tümünü işaretle</button>' : '');
+    }
   }
-  const satirlar = parcaSatirlari(o);
-  if (satirlar.length === 0) return '<p class="kart-durum-mesaj muted">Bu siparişte işaretlenecek parça yok.</p>';
-  const veri = checklistMap[o.no] || {};
-  const kalanVar = satirlar.some(s => !veri[s.key]);
-  return satirlar.map(s => parcaSatirHtml(o.no, s)).join('')
-    + (kalanVar ? '<button class="kart-tumunu" type="button" data-no="'+esc(o.no)+'">Tümünü işaretle</button>' : '');
+  return icerik + notBolumHtml(o.no);
 }
 function kartIcerikHtml(o){
   const {tamam, toplam} = kartTamamToplam(o);
@@ -885,6 +938,37 @@ function kartTumunuIsaretle(no){
   Object.keys(veri).filter(k => !veri[k]).forEach(k => parcaDegistir(no, k, true));
 }
 
+/* ---------------- sipariş notları ---------------- */
+function notPlanla(no, metin, gecikme){
+  clearTimeout(notTimer[no]);
+  const kayitli = (notMap[no] && notMap[no].metin) || '';
+  if (metin.trim() === kayitli.trim()){ delete notBekleyen[no]; return; }
+  notBekleyen[no] = metin;
+  notTimer[no] = setTimeout(() => notKaydet(no), gecikme);
+}
+async function notKaydet(no){
+  if (!(no in notBekleyen)) return;
+  const metin = notBekleyen[no];
+  delete notBekleyen[no];
+  notUcusta.add(no);
+  try{
+    const yanit = await veriCek('/api/not', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({siparis:no, metin:metin}),
+    });
+    notMap[no] = {metin: yanit.not_metin, zaman: yanit.not_zaman};
+    const kart = kartNodeMap.get(no);
+    const durumEl = kart && kart.querySelector('.not-durum');
+    if (durumEl) durumEl.textContent = yanit.not_zaman ? 'Kaydedildi '+isoStr(yanit.not_zaman) : '';
+  }catch(e){
+    notMap[no] = {metin: metin, zaman: null};  /* yazılan metni UI'da kaybetme */
+    goster('Not kaydedilemedi: '+e.message);
+  }finally{
+    notUcusta.delete(no);
+    if (notDuzenleniyor !== no && lastData) render(lastData);
+  }
+}
+
 /* ---------------- olay bağlama ---------------- */
 document.addEventListener('change', (e) => {
   const kutu = e.target.closest('input[type=checkbox][data-parca]');
@@ -896,6 +980,20 @@ document.getElementById('yigin').addEventListener('click', (e) => {
   if (serit){ sekmeyeGit(serit.dataset.gitSekme); return; }
   const btn = e.target.closest('.kart-tumunu');
   if (btn) kartTumunuIsaretle(btn.dataset.no);
+});
+document.getElementById('yigin').addEventListener('focusin', (e) => {
+  const kutu = e.target.closest('.not-kutu');
+  if (kutu) notDuzenleniyor = kutu.dataset.no;
+});
+document.getElementById('yigin').addEventListener('focusout', (e) => {
+  const kutu = e.target.closest('.not-kutu');
+  if (!kutu) return;
+  if (notDuzenleniyor === kutu.dataset.no) notDuzenleniyor = null;
+  notPlanla(kutu.dataset.no, kutu.value, 0);
+});
+document.getElementById('yigin').addEventListener('input', (e) => {
+  const kutu = e.target.closest('.not-kutu');
+  if (kutu) notPlanla(kutu.dataset.no, kutu.value, 1200);
 });
 /* şeritlerin üzerinde dikey tekerlek → yatay kaydırma (panel içi dikey kalır) */
 document.getElementById('yigin').addEventListener('wheel', (e) => {

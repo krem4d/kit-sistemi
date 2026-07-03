@@ -45,6 +45,7 @@ ORDER_PDF_DIR = os.path.join(PDF_DIR, "siparişler pdf")  # Türkçe ad yalnız 
 MANIFEST = os.path.join(BASE, "islem_gecmisi.json")
 DATA_DIR = os.path.join(BASE, "data")
 CHECKLIST_DOSYA = os.path.join(DATA_DIR, "panel_checklist.json")
+NOTLAR_DOSYA = os.path.join(DATA_DIR, "panel_notlar.json")
 SAYFA_DOSYA = os.path.join(BASE, "panel.html")
 RCLONE_ERR = "/var/log/adaptx_fbx_indir.err"
 
@@ -100,6 +101,63 @@ def _cl_kaydet():
         except OSError:
             pass
         raise
+
+
+# ------------------------------------------------------------ NOT DEPOSU ---
+# Checklist ile aynı desen: kilit + atomik yazım + bozuk dosyayı karantinaya al.
+_not_kilit = threading.Lock()
+_not_veri = {}  # {"9314": {"metin": "…", "zaman": "2026-07-03T20:15:00+03:00"}}
+NOT_MAX = 4000
+
+
+def _not_yukle():
+    global _not_veri
+    try:
+        with open(NOTLAR_DOSYA, encoding="utf-8") as f:
+            ham = json.load(f)
+        notlar = ham.get("notlar") if isinstance(ham, dict) else None
+        _not_veri = notlar if isinstance(notlar, dict) else {}
+    except FileNotFoundError:
+        _not_veri = {}
+    except Exception as e:
+        yedek = f"{NOTLAR_DOSYA}.bozuk-{int(time.time())}"
+        try:
+            os.replace(NOTLAR_DOSYA, yedek)
+            print(f"[panel] UYARI: not dosyası bozuk ({e}); {yedek} olarak saklandı.")
+        except OSError:
+            print(f"[panel] UYARI: not dosyası okunamadı: {e}")
+        _not_veri = {}
+
+
+def _not_kaydet():
+    govde = {"surum": 1, "notlar": _not_veri}
+    f = tempfile.NamedTemporaryFile("w", dir=DATA_DIR, delete=False,
+                                    prefix=".panel_notlar.tmp", encoding="utf-8")
+    try:
+        json.dump(govde, f, ensure_ascii=False, indent=1)
+        f.flush()
+        os.fsync(f.fileno())
+        f.close()
+        os.replace(f.name, NOTLAR_DOSYA)
+    except BaseException:
+        f.close()
+        try:
+            os.unlink(f.name)
+        except OSError:
+            pass
+        raise
+
+
+def not_degistir(no, metin):
+    """Sipariş notunu yaz (boş metin = notu sil); sunucu gerçeğini döndürür."""
+    with _not_kilit:
+        if metin:
+            _not_veri[no] = {"metin": metin,
+                             "zaman": datetime.now(IST).isoformat(timespec="seconds")}
+        else:
+            _not_veri.pop(no, None)
+        _not_kaydet()
+        return dict(_not_veri.get(no) or {"metin": "", "zaman": None})
 
 
 def parca_anahtarlari(veri):
@@ -401,17 +459,20 @@ def durum_yaniti():
 
     satirlar, sayac = [], {"toplam": 0, "islendi": 0, "bekleyen": 0,
                            "isleniyor": 0, "hatali": 0, "pdf": 0, "tamamlanan": 0}
-    with _cl_kilit:
+    with _cl_kilit, _not_kilit:
         for no in sirali:
             k = kayitlar[no]
             veri = k["data"] or {}
             checklist, tamam, toplam = checklist_ozeti(no, veri)
+            siparis_notu = _not_veri.get(no) or {}
             satirlar.append({
                 "no": no, "durum": k["durum"], "parca": k["parca"],
                 "pdf": k["pdf"], "ozet_no": k["ozet_no"], "zaman": k["zaman"],
                 "adet": veri.get("adet") or {}, "gram": veri.get("gram") or {},
                 "ray_setleri": veri.get("ray_setleri") or {},
                 "checklist": checklist, "tamam": tamam, "toplam": toplam,
+                "not_metin": siparis_notu.get("metin") or "",
+                "not_zaman": siparis_notu.get("zaman"),
             })
             sayac["toplam"] += 1
             sayac["pdf"] += 1 if k["pdf"] else 0
@@ -580,26 +641,39 @@ class PanelIstek(BaseHTTPRequestHandler):
                 return self._json(404, {"hata": "bulunamadı"})
 
             if self.command == "POST":
-                if yol != "/api/checklist":
+                if yol not in ("/api/checklist", "/api/not"):
                     return self._json(404, {"hata": "bulunamadı"})
                 try:
                     uzunluk = int(self.headers.get("Content-Length") or 0)
                 except ValueError:
                     uzunluk = 0
-                if not 0 < uzunluk <= 4096:
+                if not 0 < uzunluk <= 32768:
                     return self._json(400, {"hata": "geçersiz istek gövdesi"})
                 try:
                     govde = json.loads(self.rfile.read(uzunluk))
                 except Exception:
                     return self._json(400, {"hata": "JSON çözümlenemedi"})
                 no = str(govde.get("siparis") or "")
-                parca = govde.get("parca")
-                durum = govde.get("durum")
                 if not ORDER_RX.fullmatch(no):
                     return self._json(400, {"hata": "geçersiz sipariş no"})
                 kayit_sip = siparis_okumasi()["kayitlar"].get(no)
                 if kayit_sip is None:
                     return self._json(404, {"hata": "sipariş bulunamadı"})
+
+                if yol == "/api/not":
+                    metin = govde.get("metin")
+                    if not isinstance(metin, str):
+                        return self._json(400, {"hata": "metin dize olmalı"})
+                    metin = metin.strip()
+                    if len(metin) > NOT_MAX:
+                        return self._json(400, {"hata": f"not en fazla {NOT_MAX} karakter"})
+                    kayit = not_degistir(no, metin)
+                    return self._json(200, {"ok": True, "siparis": no,
+                                            "not_metin": kayit["metin"],
+                                            "not_zaman": kayit["zaman"]})
+
+                parca = govde.get("parca")
+                durum = govde.get("durum")
                 if not kayit_sip["data"]:
                     return self._json(400, {"hata": "sipariş henüz işlenmedi"})
                 gecerli = parca_anahtarlari(kayit_sip["data"])
@@ -627,6 +701,7 @@ class PanelIstek(BaseHTTPRequestHandler):
 def main():
     os.makedirs(DATA_DIR, exist_ok=True)
     _cl_yukle()
+    _not_yukle()
     sayfa_govdesi()  # panel.html'i baştan yükle (eksikse yer tutucu servis edilir)
 
     sunucu = ThreadingHTTPServer((HOST, PORT), PanelIstek)

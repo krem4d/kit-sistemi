@@ -63,6 +63,13 @@ Sipariş "tamamlandı" sayılması = o siparişteki tüm parçaların işaretlen
 olması (`tamam == toplam`, `toplam > 0`). Ayrı bir "teslim edildi" adımı
 yok; istenirse ileride eklenebilir.
 
+Her panelin altında küçük bir **not alanı** vardır (her durumdaki siparişte,
+bekleyen/hatalı dahil). Yazı durunca ~1,2 sn sonra veya alandan çıkınca
+kendiliğinden kaydedilir (`POST /api/not`); boş bırakmak notu siler. Notlar
+`data/panel_notlar.json`'da checklist ile aynı desenle saklanır (kilit +
+atomik yazım + bozuk dosyayı karantinaya alma) ve `/api/durum` yanıtında
+`not_metin`/`not_zaman` alanlarıyla gelir.
+
 Eski kayıtlar (`data/panel_checklist.json`) parça anahtarına göre saklanır;
 bir parça sonradan siparişten kalkarsa (miktar 0'a düşerse) o parçaya ait
 eski işaret sessizce yok sayılır, dosyadan silinmez.
