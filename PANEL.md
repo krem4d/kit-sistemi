@@ -69,16 +69,18 @@ eski işaret sessizce yok sayılır, dosyadan silinmez.
 
 ## 5) Görünüm — Obsidian tarzı yığılmış sekmeler + temalar
 
-Siparişler, Obsidian'ın **stacked tabs** görünümündeki gibi yatay bir yığın
-içinde durur: her sipariş, numarasının **dikey yazıldığı** dar bir sekme
-şerididir (üstünde durum rengini gösteren nokta, altında X/Y ilerlemesi).
-Şeride tıklayınca hemen yanında siparişin checklist paneli açılır; kapalıyken
-yalnızca şerit görünür. Birden fazla sekme aynı anda açık kalabilir; hangi
-sekmelerin açık olduğu tarayıcının `localStorage`'ında saklanır. Yığın
-üzerinde fare tekerleği yatay kaydırır; araç çubuğunda "Tümünü aç / Tümünü
-kapat" butonları vardır. `/` tuşu aramaya odaklanır; arama tek sonuca inince
-o sekme kendiliğinden açılıp görünüme gelir. Üstteki ince şerit (hızlı git)
-tıklanan siparişi açar ve oraya kaydırır.
+Siparişler, Obsidian'ın **kayan yığılmış sekmeleri** (sliding panes) gibi
+yatay bir yığında durur: her sipariş her zaman tam bir checklist panelidir;
+yatay kaydırdıkça paneller kenarlarda üst üste binerek yalnızca sipariş
+numarasının **dikey yazıldığı** şeritleri kalır ve kaydırmaya devam edince
+kendiliğinden açılırlar — elle aç/kapat yoktur (`position:sticky` +
+JS'te hesaplanan left/right ofsetleri; `SERIT_W` sabiti CSS'teki şerit
+genişliğiyle eşleşmelidir). Şeride veya üstteki hızlı-git piline tıklamak
+o siparişi görünüme kaydırır; şeritlerin üzerinde fare tekerleği yatay
+kaydırır. `/` tuşu aramaya odaklanır; arama tek sonuca inince o sekmeye
+kendiliğinden kaydırılır. Üst bölüm (KPI/uyarı/araç çubuğu) bilinçli olarak
+kompakt tutulur — ana odak checklist yığınıdır; yığın yüksekliği görünür
+pencereye göre büyür (`calc(100vh - …)`).
 
 Sıralama: sipariş no'suna göre **azalan** — en büyük numara en başta (araç
 çubuğundaki ↑/↓ butonuyla yön değiştirilebilir). Aynı azalan sıralama özet
@@ -91,7 +93,9 @@ kendiliğinden yenilenir).
 örneklemeyle alındı: Catppuccin Frappé zemin/metin + parlak turkuaz vurgu +
 monospace yazı tipi), **Nord**, **Karbon**, **Okyanus**, **Gece**, **Gül
 Kurusu**, **Kahve**, **Orman**, **Gün Batımı**, **Matris** (monospace),
-**Açık**, **Kum**. Seçim `localStorage`'da saklanır, sunucuya yazılmaz.
+**Açık**, **Kum**. Obsidyen ve Matris minimalisttir: köşe yarıçapları 0
+(`--radius*` değişkenleri) ve kart başlığındaki degrade/vurgu şeridi kapalı.
+Seçim `localStorage`'da saklanır, sunucuya yazılmaz.
 
 ## 6) Checklist verisini sıfırlama
 
