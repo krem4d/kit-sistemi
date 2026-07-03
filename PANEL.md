@@ -67,24 +67,31 @@ Eski kayıtlar (`data/panel_checklist.json`) parça anahtarına göre saklanır;
 bir parça sonradan siparişten kalkarsa (miktar 0'a düşerse) o parçaya ait
 eski işaret sessizce yok sayılır, dosyadan silinmez.
 
-## 5) Görünüm — sekme-kart ızgarası + karanlık temalar
+## 5) Görünüm — Obsidian tarzı yığılmış sekmeler + temalar
 
-Her sipariş, her zaman açık (tıklayıp genişletmeye gerek yok) bir "sekme
-kartı" olarak gösterilir. Obsidian'ın dikey sekme (stacked tabs) görünümünden
-esinlenerek her kartın sol kenarında sipariş no'sunun dikey yazıldığı bir
-sekme şeridi vardır (üstünde durum rengini gösteren nokta); kart başlığındaki
-yatay bilgiler de ayrıca durur. Kartlar sipariş no'suna göre **azalan**
-sıralanır — en büyük numara en başta (araç çubuğundaki ↑/↓ butonuyla yön
-değiştirilebilir). Üstteki ince şerit tüm sipariş no'larına hızlı atlama
-sağlar. Aynı azalan sıralama özet PDF'lerde de geçerlidir (`pdf_uret.py`
-her turda özetleri bu sırayla baştan üretir; araya sonradan eklenen sipariş
-doğru yere oturur ve kayan sayfalar kendiliğinden yenilenir).
+Siparişler, Obsidian'ın **stacked tabs** görünümündeki gibi yatay bir yığın
+içinde durur: her sipariş, numarasının **dikey yazıldığı** dar bir sekme
+şerididir (üstünde durum rengini gösteren nokta, altında X/Y ilerlemesi).
+Şeride tıklayınca hemen yanında siparişin checklist paneli açılır; kapalıyken
+yalnızca şerit görünür. Birden fazla sekme aynı anda açık kalabilir; hangi
+sekmelerin açık olduğu tarayıcının `localStorage`'ında saklanır. Yığın
+üzerinde fare tekerleği yatay kaydırır; araç çubuğunda "Tümünü aç / Tümünü
+kapat" butonları vardır. `/` tuşu aramaya odaklanır; arama tek sonuca inince
+o sekme kendiliğinden açılıp görünüme gelir. Üstteki ince şerit (hızlı git)
+tıklanan siparişi açar ve oraya kaydırır.
 
-8 tema mevcuttur (başlıktaki küçük renkli daireler): **Uzay** (varsayılan),
-**Obsidyen** (koyu kayrak mavisi + turkuaz, Obsidian temasından uyarlandı),
-**Karbon**, **Okyanus**, **Gece**, **Orman**, **Gün batımı**, **Açık**.
-Seçim tarayıcının `localStorage`'ında saklanır, sunucuya yazılmaz — her
-kullanıcı kendi tercihini seçer.
+Sıralama: sipariş no'suna göre **azalan** — en büyük numara en başta (araç
+çubuğundaki ↑/↓ butonuyla yön değiştirilebilir). Aynı azalan sıralama özet
+PDF'lerde de geçerlidir (`pdf_uret.py` her turda özetleri bu sırayla baştan
+üretir; araya sonradan eklenen sipariş doğru yere oturur ve kayan sayfalar
+kendiliğinden yenilenir).
+
+13 tema vardır; başlıktaki isimli tema menüsünden seçilir: **Uzay**
+(varsayılan), **Obsidyen** (kullanıcının Obsidian ekran görüntüsünden piksel
+örneklemeyle alındı: Catppuccin Frappé zemin/metin + parlak turkuaz vurgu +
+monospace yazı tipi), **Nord**, **Karbon**, **Okyanus**, **Gece**, **Gül
+Kurusu**, **Kahve**, **Orman**, **Gün Batımı**, **Matris** (monospace),
+**Açık**, **Kum**. Seçim `localStorage`'da saklanır, sunucuya yazılmaz.
 
 ## 6) Checklist verisini sıfırlama
 
