@@ -237,16 +237,17 @@ header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:
 .badge-critical{background:rgba(var(--critical-rgb),.16);} .badge-critical .dot{background:var(--critical);}
 
 /* ── Obsidian tarzı kayan yığılmış sekmeler (sliding panes) ──────────────────
-   Her sipariş her zaman tam bir panel; yatay kaydırdıkça paneller kenarlarda
-   üst üste binerek yalnızca dikey başlık şeritleri kalır, kaydırmaya devam
-   edince kendiliğinden açılırlar. position:sticky + hesaplanan left/right
-   ofsetleriyle (Obsidian/Andy Matuschak sliding panes tekniği). Ofsetler
-   JS'te SERIT_W ile hesaplanır — şerit genişliğini değiştirirken ikisini
-   birden güncelle. */
-.yigin{display:flex;align-items:stretch;overflow-x:auto;overflow-y:hidden;height:max(480px, calc(100vh - 235px));margin-top:0;border:1px solid var(--border);border-radius:var(--radius);background:var(--page);scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+   Her sipariş her zaman tam bir panel. Paneller mutlak konumlanır; kaydırma
+   aralığını #yiginSpacer sağlar. JS (yiginKaydir) her scroll karesinde panel
+   konumlarını hesaplar: iki kenarda en fazla K şerit yuvası, arada açık
+   panolar; kaydırdıkça pano şeridi kenar yuvasına kayar, sıradaki pano
+   yuvadan dışarı kendiliğinden açılır. Şerit genişliği JS'teki SERIT_W ile
+   eşleşmeli. */
+.yigin{display:block;position:relative;overflow-x:auto;overflow-y:hidden;height:max(480px, calc(100vh - 235px));margin-top:0;border:1px solid var(--border);border-radius:var(--radius);background:var(--page);scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
 .yigin::-webkit-scrollbar{height:10px;}
 .yigin::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px;}
-.yigin-sekme{display:flex;flex:none;align-items:stretch;position:sticky;width:min(452px,88vw);background:var(--surface);border-left:1px solid var(--line);box-shadow:-6px 0 12px rgba(0,0,0,.18);}
+#yiginSpacer{height:1px;}
+.yigin-sekme{display:flex;align-items:stretch;position:absolute;top:0;bottom:0;width:min(452px,88vw);background:var(--surface);border-left:1px solid var(--line);box-shadow:-6px 0 12px rgba(0,0,0,.18);}
 .yigin-sekme[hidden]{display:none;}
 .yigin-serit{flex:none;width:36px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;background:var(--surface);border:none;border-right:1px solid var(--line);cursor:pointer;user-select:none;color:inherit;font-family:inherit;}
 .yigin-serit:hover{background:rgba(var(--accent-rgb),.12);}
@@ -258,7 +259,7 @@ header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:
 .yigin-panel{flex:1;min-width:0;background:var(--surface);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
 .yigin-panel::-webkit-scrollbar{width:8px;}
 .yigin-panel::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px;}
-.yigin-bos{padding:48px 24px;text-align:center;color:var(--muted);font-size:15px;align-self:center;width:100%;}
+.yigin-bos{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:15px;}
 .yigin-bos[hidden]{display:none;}
 .kart-baslik{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 14px;background:linear-gradient(180deg, rgba(var(--accent-rgb),.12), rgba(var(--accent-rgb),.02)),var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1;}
 .kart-baslik::before{content:'';position:absolute;top:0;left:14px;right:14px;height:3px;background:var(--accent);border-radius:0 0 3px 3px;opacity:.65;}
@@ -339,6 +340,7 @@ footer.altbilgi{text-align:center;color:var(--muted);font-size:11px;padding:12px
 
   <section id="yigin" class="yigin" aria-label="Sipariş sekmeleri">
     <div id="yiginBos" class="yigin-bos" hidden>Eşleşen sipariş yok.</div>
+    <div id="yiginSpacer" aria-hidden="true"></div>
   </section>
 </main>
 
@@ -488,11 +490,20 @@ function temaBaslat(){
 }
 
 /* ---------------- kayan paneller (sliding panes) ----------------
-   Tüm sekmeler her zaman açık; position:sticky ofsetleri sayesinde
-   kaydırdıkça kenarlarda şerit olarak istiflenir, kaydırmaya devam
-   edince kendiliğinden açılırlar. CSS'teki .yigin-serit genişliğiyle
-   aynı olmalı: */
+   Tüm sekmeler her zaman açık birer panel. Kenarlarda en fazla K şerit
+   yuvası vardır (ekran genişliğine göre 1-6); kaydırdıkça geçilen panolar
+   sol yuvalara, gelecek panolar sağ yuvalara şerit olarak istiflenir,
+   aradakiler açık durur. Panel i'nin taban (içerik) konumu:
+     taban(i) = i*adim + min(i,K)*SERIT_W        (adim = panelW - SERIT_W)
+   Görünür konum = clamp(taban - scrollLeft, solYuva(i), sagYuva(i));
+   sapma transform ile uygulanır, böylece kaydırma oranında yavaş yavaş
+   açılıp kapanırlar. SERIT_W, CSS'teki .yigin-serit genişliğiyle aynı
+   olmalı. */
 const SERIT_W = 36;
+let yiginNodlar = [];      /* görünür (filtre/aramadan geçen) sekme düğümleri, sırayla */
+let yiginPanelW = 452;
+let yiginAdim = 452 - SERIT_W;
+let yiginK = 6;
 function gorunurSekmeler(){
   const sonuc = [];
   for (const node of document.getElementById('yigin').children){
@@ -500,25 +511,46 @@ function gorunurSekmeler(){
   }
   return sonuc;
 }
-function yiginOfsetleriUygula(){
-  const nodlar = gorunurSekmeler();
-  const n = nodlar.length;
-  if (!n) return;
-  const panelW = nodlar[0].offsetWidth || 452;
-  nodlar.forEach((node, i) => {
-    node.style.left = (i * SERIT_W) + 'px';
-    node.style.right = ((n - i) * SERIT_W - panelW) + 'px';
+function yiginTaban(i){
+  return i * yiginAdim + Math.min(i, yiginK) * SERIT_W;
+}
+function yiginYerlesim(){
+  const yigin = document.getElementById('yigin');
+  yiginNodlar = gorunurSekmeler();
+  const n = yiginNodlar.length;
+  if (!n){ document.getElementById('yiginSpacer').style.width = '0px'; return; }
+  yiginPanelW = yiginNodlar[0].offsetWidth || 452;
+  yiginAdim = Math.max(1, yiginPanelW - SERIT_W);
+  yiginK = Math.max(1, Math.min(6, Math.floor((yigin.clientWidth - yiginPanelW) / (2 * SERIT_W))));
+  yiginNodlar.forEach((node, i) => {
+    node.style.left = yiginTaban(i) + 'px';
     node.style.zIndex = i + 1;
   });
+  document.getElementById('yiginSpacer').style.width = (yiginTaban(n - 1) + yiginPanelW + SERIT_W) + 'px';
+  yiginKaydir();
+}
+function yiginKaydir(){
+  const n = yiginNodlar.length;
+  if (!n) return;
+  const yigin = document.getElementById('yigin');
+  const S = SERIT_W, K = yiginK;
+  const vw = yigin.clientWidth, sl = yigin.scrollLeft;
+  const cur = sl / yiginAdim;   /* kaydırma konumunun pano indeksi karşılığı (kesirli) */
+  for (let i = 0; i < n; i++){
+    const dogal = yiginTaban(i) - sl;
+    const sol = Math.max(0, Math.min(i - cur + K, K, i)) * S;
+    let sag = vw - Math.min(Math.max(K - (i - cur) + 1, 1), K, n - i) * S;
+    if (sag < sol) sag = sol;
+    const x = Math.max(sol, Math.min(dogal, sag));
+    yiginNodlar[i].style.transform = (x === dogal) ? '' : ('translateX(' + (x - dogal) + 'px)');
+  }
 }
 function sekmeyeGit(no){
   const node = document.getElementById('siparis-'+no);
   if (!node || node.hidden) return;
-  const nodlar = gorunurSekmeler();
-  const i = nodlar.indexOf(node);
+  const i = yiginNodlar.indexOf(node);
   if (i < 0) return;
-  const panelW = nodlar[0].offsetWidth || 452;
-  document.getElementById('yigin').scrollTo({left: i * (panelW - SERIT_W), behavior: 'smooth'});
+  document.getElementById('yigin').scrollTo({left: i * yiginAdim, behavior: 'smooth'});
 }
 
 /* ---------------- checklist yerel önbellek ---------------- */
@@ -808,7 +840,7 @@ function render(d){
   });
 
   gorunurlukUygula(sirali);
-  yiginOfsetleriUygula();
+  yiginYerlesim();
 
   const gorunur = sirali.filter(gecer);
   document.getElementById('yiginBos').hidden = gorunur.length > 0;
@@ -877,7 +909,13 @@ document.getElementById('hizliGit').addEventListener('click', (e) => {
   const pil = e.target.closest('[data-git]');
   if (pil) sekmeyeGit(pil.dataset.git);
 });
-window.addEventListener('resize', () => yiginOfsetleriUygula());
+let yiginKaydirBekliyor = false;
+document.getElementById('yigin').addEventListener('scroll', () => {
+  if (yiginKaydirBekliyor) return;
+  yiginKaydirBekliyor = true;
+  requestAnimationFrame(() => { yiginKaydirBekliyor = false; yiginKaydir(); });
+});
+window.addEventListener('resize', () => yiginYerlesim());
 document.getElementById('filtreBar').addEventListener('click', (e) => {
   const b = e.target.closest('.chip');
   if (!b) return;
