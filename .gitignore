@@ -7,8 +7,10 @@ fbx/
 jsons/
 # üretilen PDF'ler
 pdf/
-# servis belleği (işlenme sırası)
+# servis belleği (özet sıralaması)
 islem_gecmisi.json
+# proje yedekleri (büyük, elle alınır)
+legacy/
 
 # ── Blender dosyaları (büyük) ────────────────────────────────────────────────
 *.blend

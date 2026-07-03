@@ -70,13 +70,21 @@ eski işaret sessizce yok sayılır, dosyadan silinmez.
 ## 5) Görünüm — sekme-kart ızgarası + karanlık temalar
 
 Her sipariş, her zaman açık (tıklayıp genişletmeye gerek yok) bir "sekme
-kartı" olarak gösterilir; kartlar sipariş no'suna göre sıralanır (araç
-çubuğundaki ↑/↓ butonuyla yön değiştirilebilir). Üstteki ince şerit tüm
-sipariş no'larına hızlı atlama sağlar.
+kartı" olarak gösterilir. Obsidian'ın dikey sekme (stacked tabs) görünümünden
+esinlenerek her kartın sol kenarında sipariş no'sunun dikey yazıldığı bir
+sekme şeridi vardır (üstünde durum rengini gösteren nokta); kart başlığındaki
+yatay bilgiler de ayrıca durur. Kartlar sipariş no'suna göre **azalan**
+sıralanır — en büyük numara en başta (araç çubuğundaki ↑/↓ butonuyla yön
+değiştirilebilir). Üstteki ince şerit tüm sipariş no'larına hızlı atlama
+sağlar. Aynı azalan sıralama özet PDF'lerde de geçerlidir (`pdf_uret.py`
+her turda özetleri bu sırayla baştan üretir; araya sonradan eklenen sipariş
+doğru yere oturur ve kayan sayfalar kendiliğinden yenilenir).
 
-4 tema mevcuttur (başlıktaki küçük renkli daireler): **Uzay** (varsayılan),
-**Karbon**, **Okyanus**, **Açık**. Seçim tarayıcının `localStorage`'ında
-saklanır, sunucuya yazılmaz — her kullanıcı kendi tercihini seçer.
+8 tema mevcuttur (başlıktaki küçük renkli daireler): **Uzay** (varsayılan),
+**Obsidyen** (koyu kayrak mavisi + turkuaz, Obsidian temasından uyarlandı),
+**Karbon**, **Okyanus**, **Gece**, **Orman**, **Gün batımı**, **Açık**.
+Seçim tarayıcının `localStorage`'ında saklanır, sunucuya yazılmaz — her
+kullanıcı kendi tercihini seçer.
 
 ## 6) Checklist verisini sıfırlama
 

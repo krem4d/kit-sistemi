@@ -14,6 +14,7 @@ Ağırlıklı parçalar hücrede "adet / gram" olarak yazılır (ayrı gram böl
 """
 
 import os
+import re
 import glob
 import json
 
@@ -28,9 +29,9 @@ BASE = _env_base if (_env_base and os.path.isdir(_env_base)) else os.path.dirnam
 PDF_DIR = os.path.join(BASE, "pdf")
 ORDER_PDF_DIR = os.path.join(PDF_DIR, "siparişler pdf")   # sipariş başına PDF'ler burada
 JSON_DIR = os.path.join(BASE, "jsons")
-# Bellek: siparişlerin İŞLENME sırası. Özet bu sıraya göre dizilir (yeni siparişler
-# sona eklenir), böylece var olan özetin sonuna eklenmiş olur. parca_sayim.py da aynı
-# dosyayı yazar; burada eksik/yeni siparişler kendini onararak eklenir.
+# Bellek: özet sıralaması. Özet, sipariş no'suna göre AZALAN dizilir (en büyük
+# numara en başta); manifest her turda bu sırayla yeniden yazılır. parca_sayim.py
+# yeni işlenenleri sona ekler; burada sıralama nihai halini alır.
 MANIFEST = os.path.join(BASE, "islem_gecmisi.json")
 
 A4 = (8.27, 11.69)          # inch, dikey
@@ -145,14 +146,22 @@ def save_manifest(order_list):
         json.dump({"siralama": order_list}, f, ensure_ascii=False, indent=2)
 
 
+def _no_key(no):
+    """'9304-1' → (9304, 1); sayısal sıralama anahtarı."""
+    m = re.match(r"^(\d+)(?:-(\d+))?$", str(no))
+    if not m:
+        return (0, 0)
+    return (int(m.group(1)), int(m.group(2) or 0))
+
+
 def ordered_keys(data):
-    """Siparişleri işlenme sırasına (manifest) göre dizer; manifestte olmayan
-    (elle eklenmiş) siparişleri sona sıralı ekler ve manifesti kendini onararak
-    günceller. Böylece özet 'var olanın sonuna ekle' mantığıyla dizilir."""
+    """Siparişleri numaraya göre AZALAN dizer (en büyük numara en başta —
+    kullanıcı isteği). Araya sonradan eklenen sipariş (ör. 9265, 9259 ile 9270
+    arasına) özet düzeninde doğru yere oturur; özet zaten her turda baştan
+    üretildiği için kayan sayfalar kendiliğinden yenilenir. Manifest de bu
+    sırayla yazılır ki panel'in özet-sayfa numarası hesabı tutarlı kalsın."""
     manifest = load_manifest()
-    ordered = [k for k in manifest if k in data]
-    extras = sorted(k for k in data if k not in ordered)
-    ordered += extras
+    ordered = sorted(data, key=_no_key, reverse=True)
     if ordered != manifest:
         save_manifest(ordered)
     return ordered
@@ -232,7 +241,7 @@ def main():
         print(f"!! {PDF_DIR} içinde JSON yok. Önce parca_sayim.py çalıştır.")
         return
 
-    orders = ordered_keys(data)      # işlenme sırası (yeni siparişler sonda)
+    orders = ordered_keys(data)      # no'ya göre azalan (en büyük en başta)
     print(f"== pdf_uret: {len(orders)} sipariş ({orders})")
 
     # 1) Sipariş başına → "siparişler pdf" alt klasörü. Zaten üretilmiş olanlar
@@ -247,7 +256,7 @@ def main():
         yeni += 1
     print(f"   sipariş PDF: {yeni} yeni, {len(orders) - yeni} atlandı (zaten var)")
 
-    # 2) Özet: her zaman baştan üretilir (yeni siparişler sona eklenmiş olur).
+    # 2) Özet: her zaman baştan üretilir (araya giren sipariş doğru yere oturur).
     #    Bayat özet sayfalarını temizle (sipariş sayısı azaldığında kalıntı olmasın).
     for old in glob.glob(os.path.join(PDF_DIR, "siparisler_ozet*.pdf")):
         try:

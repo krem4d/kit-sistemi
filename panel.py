@@ -283,10 +283,9 @@ def siparis_okumasi():
             if no in idx_map and k["durum"] == "islendi":
                 k["ozet_no"] = idx_map[no] // OZET_BASINA + 1
 
-        # 5) Görüntüleme sırası: sipariş no'suna göre artan (kullanıcı isteği — önceki
-        # "sorunlu önce" önceliklendirmesi kaldırıldı; frontend gerekirse yön toggle'ıyla
-        # tersine çevirir).
-        sirali = sorted(kayitlar, key=_no_sirala)
+        # 5) Görüntüleme sırası: sipariş no'suna göre azalan — en büyük numara en
+        # başta (kullanıcı isteği; frontend gerekirse yön toggle'ıyla tersine çevirir).
+        sirali = sorted(kayitlar, key=_no_sirala, reverse=True)
 
         sonuc = {"kayitlar": kayitlar, "sirali": sirali,
                  "no_suz_fbx": sorted(no_suz), "son_fbx": son_fbx}
