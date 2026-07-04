@@ -78,6 +78,17 @@ TOLERANCE = 0.05           # %5 (güncel delikbulma.py ile aynı)
 KULP_DELIK_MESAFE = 0.192  # m — kulp deliği çifti arasındaki sabit mesafe (192 mm)
 KULP_DELIK_TOL = 0.05      # %5 tolerans (±~10 mm)
 
+# ── Ray deliği hacmi (ahşap vidasından FARKLI, kendine özgü delik) ───────────
+# Keşif (hacim_bul_raporu.txt, Object_23): ray'e ait delikler CATEGORIES'teki
+# hiçbir hacimle eşleşmiyor ([BİLİNMİYOR]) — 3 delik: 84.9189 / 84.9188 / 84.9175.
+# Bu, ahsapcivisi (14.57) ile AYNI delik DEĞİL, kendine özgü bir hacim. Eskiden
+# detect_rays() ahsapcivisi (gerçek ağaç vidası) havuzunda arıyordu; bu yüzden
+# rastgele aralıklı gerçek vidalar ray desenine tesadüfen uyup yanlış ray sanılıyordu
+# (ör. gerçek 55cm ray'in 25cm bulunması). Ray'ler artık SADECE bu kendine özgü
+# hacim bandındaki deliklerden aranır — ahşap vidası/ayarlı ayak havuzuna DOKUNMAZ.
+RAY_DELIK_HACIM = 84.92    # hacim_bul_raporu.txt ölçümü (3 deliğin ortalaması)
+RAY_DELIK_TOL = 0.02       # %2 (tekil ölçüm, linco/pim gibi hassas delik tipi)
+
 # ── Uzun linco pimi (iki parçadaki birbirine dayalı linco delikleri) ──────────
 # İki AYRI modülün birbirine dayanan linco gövde delikleri arasına normal linco
 # dübeli yerine tek bir uzun linco pimi konur. linco_mesafe_bul.py ölçümü: abutting
@@ -110,24 +121,54 @@ FLANS_KENAR_TOL = 0.02       # kenar uzunlukları %2 toleransla eşit
 FLANS_ACI_LO = 59.0          # eşkenar üçgen açı alt sınırı (derece)
 FLANS_ACI_HI = 61.0          # eşkenar üçgen açı üst sınırı (derece)
 
-# ── Ray seti (ahsapcivisi deliklerinin ray deseninden tespiti) ───────────────
+# ── Ray seti (RAY_DELIK_HACIM bandındaki deliklerin ray deseninden tespiti) ──
 # Kalibrasyon: kulp deliği modelde 0.192 birim ↔ gerçek 192 mm → 1 birim = 1000 mm.
-# Ray delikleri de ahşap vidası boyutunda; parçadaki ahsapcivisi delikleri
-# arasından doğrusal + aralıkları bir ray desenine uyanlar = 1 ray (kalanlar
-# gerçek ağaç vidası). Ölçüler Ray_Seti_Bulma_Planı.md'den (mm).
+# Ray delikleri ahşap vidasıyla AYNI delik DEĞİL (bkz. RAY_DELIK_HACIM); parçadaki
+# RAY_DELIK_HACIM bandına giren delikler arasından doğrusal + ardışık aralıkları bir
+# ray boyunun imzasına (aşağıdaki RAY_GAPS) uyanlar = 1 ray. İmzalar, kullanıcının
+# referans-noktasına göre ölçtüğü delik KONUMLARINDAN (RAY_HOLE_POSITIONS) türetilir.
 RAY_SCALE_MM = 1000.0        # model birimi → mm çarpanı (kulp 0.192 ↔ 192 mm)
 RAY_TOL_MM = 8.0             # delik-aralığı eşleşme toleransı (mm)
 RAY_COLINEAR_TOL_MM = 8.0    # doğrusallık: en uzun kenar ≈ diğer ikisinin toplamı (mm)
-# Ray boyu → ardışık delik aralıkları (mm). (delik konumları yorumda)
-RAY_GAPS = {
-    "55cm": [149.0, 222.0],   # delikler: 63, 212, 434
-    "50cm": [150.0, 161.0],   # 64, 214, 375
-    "45cm": [152.0, 102.0],   # 64, 216, 318
-    "40cm": [129.0, 82.0],    # 64, 193, 275
-    "35cm": [77.0, 83.0],     # 64, 141, 224
-    "30cm": [109.0],          # 63, 172
-    "25cm": [188.0],          # 43, 231
+
+# Ray boyu → deliklerin REFERANS-NOKTASINDAN uzaklıkları (mm). Kaynak: kullanıcı
+# ölçümü — rayla AYNI doğrultudaki sabit bir referans noktasına göre her deliğin
+# konumu ölçüldü. Ardışık delikler arası FARK = o ray'in desen aralıkları (imzası).
+# ÖNEMLİ: ray boyu ile aralıklar DOĞRU ORANTILI DEĞİL; her boyun aralık imzası
+# kendine ÖZGÜ (unique) — eşleştirme boydan değil, bu imzadan yapılır.
+RAY_HOLE_POSITIONS = {
+    "55cm": [63.0, 212.0, 434.0],
+    "50cm": [64.0, 214.0, 375.0],
+    "45cm": [64.0, 216.0, 318.0],
+    "40cm": [64.0, 193.0, 275.0],
+    "35cm": [64.0, 141.0, 224.0],
+    "30cm": [63.0, 172.0],
+    "25cm": [43.0, 231.0],
 }
+# Ardışık aralıklar konumlardan TÜRETİLİR (elle yazılmaz → kayma/tutarsızlık olmaz).
+# ör. 55cm: 212-63=149, 434-212=222 → [149, 222].
+RAY_GAPS = {name: [round(pos[i + 1] - pos[i], 1) for i in range(len(pos) - 1)]
+            for name, pos in RAY_HOLE_POSITIONS.items()}
+
+# ── Ayarlı ayak (4 ahşap çivisi = sabit dikdörtgen) ──────────────────────────
+# Ölçüm (iki_obje_mesafe.py, Object_55): ayağın 4 vida deliği, kenarları ~32 ve ~40 mm,
+# köşegeni ~51.22 mm olan bir DİKDÖRTGEN oluşturur (4 delik hep aynı mesafelerde).
+# Bir parçadaki ağaç vidası delikleri arasından bu dikdörtgeni oluşturan 4'lü = 1 ayak.
+# Eski kural ("parçada TAM 4 vida → 1 ayak") panele DAĞILMIŞ 4 yapısal vidayı da ayak
+# sayıyordu → olması gerekenden fazla (9262: 11 sayılıyordu, gerçek ~1). Dikdörtgen
+# şekli bu yanlış pozitifleri eler; ağaç vidası/ray/flanş sayımına DOKUNMAZ.
+#
+# Tespit yöntemi (geometrik, sıralı-mesafe listesiyle KIYASLAMAZ — bkz. count_ayak_feet
+# yorumu): "paralelkenarın köşegenleri birbirini ortalar VE dikdörtgende bu köşegenler
+# EŞİT uzunluktadır" teoremini kullanır. Sıralı 6-mesafe karşılaştırması hangi mesafenin
+# kenar/köşegen olduğunu KAYBEDER (topolojiyi görmez) → hem yanlış pozitif hem yanlış
+# negatif üretebilir. Köşegen+orta-nokta yöntemi bu belirsizliği ortadan kaldırır.
+AYAK_KENAR_A_MM = 32.0     # kısa kenar (mm)
+AYAK_KENAR_B_MM = 40.0     # uzun kenar (mm)
+AYAK_KENAR_TOL_PCT = 0.03  # kenar/köşegen/orta-nokta eşleşme toleransı (%3, diğer
+                           # kategorilerle tutarlı bağıl tolerans — ör. TOLERANCE=%5)
+AYAK_SCALE_MM = 1000.0     # model birimi → mm (kulp 0.192 ↔ 192 mm ile aynı ölçek)
+_AYAK_DIAG_MM = math.hypot(AYAK_KENAR_A_MM, AYAK_KENAR_B_MM)   # 51.22 mm
 
 # ── Birim ağırlıklar (gram) — Ağırlıklar.md ──────────────────────────────────
 WEIGHTS = {
@@ -221,6 +262,13 @@ def match_category(vol):
         if target * (1 - TOLERANCE) <= vol <= target * (1 + TOLERANCE):
             return cat_name
     return None
+
+
+def is_ray_hole(vol):
+    """Delik hacmi RAY_DELIK_HACIM bandında mı? (ray'e özgü delik — ahsapcivisi DEĞİL)"""
+    lo = RAY_DELIK_HACIM * (1 - RAY_DELIK_TOL)
+    hi = RAY_DELIK_HACIM * (1 + RAY_DELIK_TOL)
+    return lo <= vol <= hi
 
 
 def world_center(obj):
@@ -372,59 +420,63 @@ def detect_long_linco_pins(parts_holes):
     return pins
 
 
-def _match_gap_pair(p, q):
-    """İki ölçülen aralık (mm) 3-delikli bir ray desenine uyuyor mu? Ray adı ya da None."""
-    for name, gaps in RAY_GAPS.items():
-        if len(gaps) != 2:
-            continue
-        g1, g2 = gaps
-        if (abs(p - g1) <= RAY_TOL_MM and abs(q - g2) <= RAY_TOL_MM) or \
-           (abs(p - g2) <= RAY_TOL_MM and abs(q - g1) <= RAY_TOL_MM):
-            return name
-    return None
+def _ray_signature_match(gaps_mm):
+    """Ölçülen ardışık aralıklara EN İYİ uyan ray boyunu döndürür (yoksa None).
 
-
-def _match_gap_single(d):
-    """Tek ölçülen aralık (mm) 2-delikli bir ray desenine uyuyor mu? Ray adı ya da None."""
+    Her boyun "imzası" sıralı-aralık listesidir (RAY_GAPS, konumlardan türetilir).
+    İmzalar unique olduğundan normalde tek boy uyar; yine de sağlamlık için TÜM
+    aralıkları ±RAY_TOL_MM içinde olan boylar arasından EN DÜŞÜK toplam sapmalı
+    seçilir (ilk-uyan değil). Bu, ilk aralıkları çok yakın olan 55/50/45 boylarını
+    (149/150/152) güvenle ayırır — ayrımı ikinci aralık (222/161/102) yapar."""
+    measured = sorted(gaps_mm)
+    best_name, best_dev = None, None
     for name, gaps in RAY_GAPS.items():
-        if len(gaps) != 1:
+        if len(gaps) != len(measured):
             continue
-        if abs(d - gaps[0]) <= RAY_TOL_MM:
-            return name
-    return None
+        ref = sorted(gaps)
+        if all(abs(m - r) <= RAY_TOL_MM for m, r in zip(measured, ref)):
+            dev = sum(abs(m - r) for m, r in zip(measured, ref))
+            if best_dev is None or dev < best_dev:
+                best_name, best_dev = name, dev
+    return best_name
 
 
 def detect_rays(centers):
-    """Parçadaki ahsapcivisi delik merkezlerinden ray desenlerini ayır.
-    Önce 3-delikli (doğrusal + aralıkları eşleşen) raylar, sonra kalan deliklerde
-    2-delikli raylar. Her ray = 1 çekmece rayı; kalan delikler gerçek ağaç vidası.
-    Returns (ray_isimleri:list, kalan_merkezler:list)."""
+    """Parçadaki ray-deliği (RAY_DELIK_HACIM) merkezlerinden ray desenlerini ayır.
+
+    Model: Bir ray'in delikleri, rayla aynı doğrultuda DOĞRUSAL dizilir; ardışık
+    aralıkları o boya özgü unique imzayı (RAY_GAPS) verir. 3-delikli boylar (55–35cm)
+    daha spesifik olduğu için ÖNCE, sonra kalan deliklerde 2-delikli boylar (30/25cm)
+    aranır. Her eşleşme = 1 çekmece rayı. Her delik en fazla bir ray'de kullanılır
+    (greedy). Returns (ray_isimleri:list, kalan_merkezler:list).
+
+    Not: Bu havuz ahsapcivisi/ayarlı ayak havuzuyla KESİŞMEZ (bkz. RAY_DELIK_HACIM),
+    dolayısıyla ray tespiti ağaç vidası/ayak sayımını hiç etkilemez."""
     n = len(centers)
     used = [False] * n
     rays = []
 
-    # 3-delikli raylar (daha spesifik → önce)
+    # 3-delikli raylar (doğrusal üçlü + iki ardışık aralığın imzası)
     for i, j, k in itertools.combinations(range(n), 3):
         if used[i] or used[j] or used[k]:
             continue
         dij = (centers[i] - centers[j]).length * RAY_SCALE_MM
         djk = (centers[j] - centers[k]).length * RAY_SCALE_MM
         dik = (centers[i] - centers[k]).length * RAY_SCALE_MM
-        p, q, r = sorted([dij, djk, dik])
-        # doğrusal mı? (en uzun kenar ≈ diğer ikisinin toplamı)
-        if abs(r - (p + q)) > RAY_COLINEAR_TOL_MM:
+        p, q, r = sorted([dij, djk, dik])          # p,q = iki ardışık aralık; r = açıklık
+        if abs(r - (p + q)) > RAY_COLINEAR_TOL_MM:  # doğrusal mı? (açıklık ≈ aralıkların toplamı)
             continue
-        name = _match_gap_pair(p, q)
+        name = _ray_signature_match([p, q])
         if name:
             used[i] = used[j] = used[k] = True
             rays.append(name)
 
-    # 2-delikli raylar (kalan deliklerde)
+    # 2-delikli raylar (kalan deliklerde; tek aralık imzası)
     for i, j in itertools.combinations(range(n), 2):
         if used[i] or used[j]:
             continue
         d = (centers[i] - centers[j]).length * RAY_SCALE_MM
-        name = _match_gap_single(d)
+        name = _ray_signature_match([d])
         if name:
             used[i] = used[j] = True
             rays.append(name)
@@ -470,6 +522,88 @@ def count_equilateral_flanges(centers):
         used[i] = used[j] = used[k] = True
         flanges += 1
     return flanges
+
+
+def _ayak_dikdortgen_adaylari(centers):
+    """Ayağın 32×40 mm dikdörtgenini GEOMETRİK olarak bulur (sıralı-mesafe listesiyle
+    KIYASLAMAZ). Kullanılan teorem: bir paralelkenarın köşegenleri birbirini ortalar;
+    bu köşegenler EŞİT uzunluktaysa şekil bir DİKDÖRTGENDİR. Adımlar:
+      1) Her ikili vida mesafesini tara; ~51.22 mm (köşegen) olanları ADAY köşegen say.
+      2) İki aday köşegen (4 AYRI delik) ORTAK bir orta noktayı paylaşıyorsa (±tolerans)
+         → köşegenler birbirini ortalıyor → dikdörtgen/paralelkenar.
+      3) Bitişik kenar uzunlukları (32 ve 40 mm) tutuyor mu diye doğrula.
+    Sıralı-mesafe karşılaştırması hangi mesafenin kenar/köşegen olduğunu KAYBEDER
+    (topolojisiz); bu yöntem köşegen+orta-nokta ile topolojiyi doğrudan kullanır →
+    hem yanlış pozitif hem yanlış negatif riskini azaltır.
+    Returns: [(sapma, frozenset(4 delik indeksi)), ...] — sapma küçük = daha iyi uyum."""
+    n = len(centers)
+    if n < 4:
+        return []
+    diag_lo = _AYAK_DIAG_MM * (1 - AYAK_KENAR_TOL_PCT)
+    diag_hi = _AYAK_DIAG_MM * (1 + AYAK_KENAR_TOL_PCT)
+    mid_tol_mm = _AYAK_DIAG_MM * AYAK_KENAR_TOL_PCT
+
+    # 1) Aday köşegenler: ~51.22 mm mesafedeki ikili delikler + orta noktaları.
+    diagonaller = []
+    for i, j in itertools.combinations(range(n), 2):
+        d = (centers[i] - centers[j]).length * AYAK_SCALE_MM
+        if diag_lo <= d <= diag_hi:
+            mid = (centers[i] + centers[j]) / 2.0
+            diagonaller.append((i, j, d, mid))
+
+    # 2) İki aday köşegen ortak orta noktalı mı (4 AYRI delik)? + 3) kenar doğrulaması.
+    adaylar = []
+    for (i, j, d1, m1), (k, l, d2, m2) in itertools.combinations(diagonaller, 2):
+        if len({i, j, k, l}) < 4:
+            continue
+        if (m1 - m2).length * AYAK_SCALE_MM > mid_tol_mm:
+            continue
+        # i-k ve i-l birbirini tamamlayan iki bitişik kenar (biri ~32, diğeri ~40).
+        kenar1 = (centers[i] - centers[k]).length * AYAK_SCALE_MM
+        kenar2 = (centers[i] - centers[l]).length * AYAK_SCALE_MM
+        kisa, uzun = sorted([kenar1, kenar2])
+        sapma = max(abs(kisa - AYAK_KENAR_A_MM) / AYAK_KENAR_A_MM,
+                    abs(uzun - AYAK_KENAR_B_MM) / AYAK_KENAR_B_MM,
+                    abs(d1 - _AYAK_DIAG_MM) / _AYAK_DIAG_MM,
+                    abs(d2 - _AYAK_DIAG_MM) / _AYAK_DIAG_MM)
+        if sapma <= AYAK_KENAR_TOL_PCT:
+            adaylar.append((sapma, frozenset((i, j, k, l))))
+    return adaylar
+
+
+def extract_ayak_feet(centers):
+    """Ağaç vidası delik merkezleri arasından ayağın ~32×40 mm dikdörtgenini oluşturan
+    4'lüleri ayıklar (bkz. _ayak_dikdortgen_adaylari). En iyi uyan dikdörtgen önce
+    (greedy); her delik en fazla bir ayakta kullanılır. Her dikdörtgen = 1 ayarlı ayak.
+
+    ÖNEMLİ — bu ayıklama detect_rays()'DEN ÖNCE, HAM ahsapcivisi listesi üzerinde
+    çağrılmalı (detect_kulp_pairs'in modulbaglanti listesini ray'den/başka bir şeyden
+    önce ayırması gibi). Gerçek veri teşhisinde (9304-2/Object_18) görüldü: bir ayak
+    köşesi, ray deseni önce çalıştırılırsa YANLIŞLIKLA 'ray' sanılıp havuzdan
+    kayboluyor (ray mesafe pencereleri gevşek + bağlamsız greedy eşleşme) → ayak
+    dikdörtgeni 3 köşeye düşüp hiç yakalanamıyor (sessiz eksik sayım — tolerans
+    büyütmekle DÜZELMEZ, çünkü eksik köşe zaten aday havuzunda yok). Ayağı ÖNCE
+    ayırıp kilitlemek bu çalınmayı önler; ray kendi kuralıyla SADECE ayak-dışı
+    delikler üzerinde aranmaya devam eder (ray mantığı değişmez).
+
+    Returns: (ayak_adedi, ayak_noktalari, ayak_disi_noktalar)"""
+    adaylar = sorted(_ayak_dikdortgen_adaylari(centers), key=lambda t: t[0])
+    used = set()
+    feet = 0
+    for _sapma, idxset in adaylar:
+        if used & idxset:
+            continue
+        used |= idxset
+        feet += 1
+    ayak_noktalari = [c for i, c in enumerate(centers) if i in used]
+    ayak_disi = [c for i, c in enumerate(centers) if i not in used]
+    return feet, ayak_noktalari, ayak_disi
+
+
+def count_ayak_feet(centers):
+    """extract_ayak_feet'in sadece adet döndüren kısayolu (teşhis/test için)."""
+    feet, _ayak_noktalari, _ayak_disi = extract_ayak_feet(centers)
+    return feet
 
 
 def part_thickness(obj):
@@ -572,6 +706,7 @@ def count_order(order):
         part_ahsap_centers = []
         part_modul_centers = []
         part_linco_holes = []
+        part_ray_centers = []
         for h in holes:
             v = h["volume"]
             obj_part = h["object"]
@@ -579,7 +714,6 @@ def count_order(order):
             if cat == "modulbaglanti":
                 part_modul_centers.append(world_center(obj_part))
             elif cat == "ahsapcivisi":
-                # ray/ağaç vidası ayrımı aşağıda desen taramasıyla yapılır
                 part_ahsap_centers.append(world_center(obj_part))
             elif cat == "linco":
                 counts["linco"] += 1
@@ -589,6 +723,10 @@ def count_order(order):
                 counts[cat] += 1
                 if cat == "menteseTabani":
                     part_mentese += 1
+            elif is_ray_hole(v):
+                # ray'e özgü delik (ahsapcivisi DEĞİL, bkz. RAY_DELIK_HACIM) — ray
+                # deseni bu havuzda aranır, ahşap vidası/ayarlı ayak havuzuna girmez.
+                part_ray_centers.append(world_center(obj_part))
             bpy.data.objects.remove(obj_part, do_unlink=True)
 
         # Bu parçadaki modulbaglanti deliklerinden kulp çiftlerini ayır
@@ -596,16 +734,22 @@ def count_order(order):
         kulp += kulp_from_part
         modulbag_centers.extend(remaining_modul)
 
-        # Ray desenleri (ahsapcivisi deliklerinden) — bu delikler ağaç vidası
-        # sayımından çıkarılır; kalanlar gerçek ağaç vidası deliğidir.
-        part_rays, remaining_ahsap = detect_rays(part_ahsap_centers)
+        # Ayarlı ayak: HAM ahsapcivisi listesinden ayıkla (izolasyon: ayak vidaları
+        # ağaç vidası havuzunda KALIR, bkz. parca_kurallari.md).
+        ayak_bu_parca, ayak_noktalari, ayak_disi = extract_ayak_feet(part_ahsap_centers)
+        ayak += ayak_bu_parca
+
+        # Ray desenleri artık KENDİNE ÖZGÜ delik havuzunda (part_ray_centers,
+        # RAY_DELIK_HACIM) aranır — ahsapcivisi havuzuyla hiç KESİŞMEZ. Böylece
+        # rastgele aralıklı gerçek ağaç vidaları artık ray sanılıp çalınamaz;
+        # ayarlı ayak/ağaç vidası sayımı ray tespitinden tamamen bağımsızdır.
+        part_rays, _ray_disi = detect_rays(part_ray_centers)
         ray_isimleri.extend(part_rays)
+        remaining_ahsap = ayak_noktalari + ayak_disi
         counts["ahsapcivisi"] += len(remaining_ahsap)
 
         if part_mentese > 0:
             parts_with_mentese += 1
-        if len(remaining_ahsap) == 4:   # bir parçada TAM 4 ağaç vidası → 1 ayak
-            ayak += 1
         # Askılık flanşı: kalan ağaç vidası deliklerinden eşkenar üçgenler
         askilik_flansi += count_equilateral_flanges(remaining_ahsap)
 
