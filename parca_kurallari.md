@@ -74,33 +74,93 @@ uygular. Kaynak türleri:
   `LONG_LINCO_AXIS_MIN`.
 
 ### Ayarlı ayak
-- **Kaynak:** delik grubu (`ahsapcivisi`).
-- **Kural (orijinal delikbulma.py ile birebir):** Bir parçada **TAM 4** ağaç vidası deliği
-  varsa → **1** ayarlı ayak (`part_ahsap == 4`). 4 değilse 0.
-- **Adet:** koşulu sağlayan parça sayısı.
-- **Hacim:** `ahsapcivisi = 19.48`, `TOLERANCE = %5` (güncel delikbulma.py). 8990'da doğrulandı.
+- **Kaynak:** geometri (`ahsapcivisi` deliklerinin oluşturduğu **dikdörtgen**).
+- **Kural (GEOMETRİK tespit — sıralı-mesafe listesiyle KIYASLAMAZ):** Bir parçadaki
+  ağaç vidası delikleri arasından kenarları **~32 × ~40 mm** (köşegen ~51.22 mm) olan
+  bir **dikdörtgen** oluşturan **4'lü** = **1 ayarlı ayak**. Kullanılan teorem: *bir
+  paralelkenarın köşegenleri birbirini ortalar; bu köşegenler EŞİT uzunluktaysa şekil
+  bir dikdörtgendir.* Adımlar: (1) ~51.22 mm mesafedeki ikili delikleri ADAY köşegen
+  say; (2) iki aday köşegen (4 AYRI delik) ORTAK orta noktayı paylaşıyorsa paralelkenar;
+  (3) bitişik kenarların 32/40 mm tutup tutmadığını doğrula. Her ölçüm (2 kenar + 2
+  köşegen) **bağıl %3** tolerans içinde olmalı (`AYAK_KENAR_TOL_PCT`). En iyi uyan
+  dikdörtgen önce eşleşir (greedy); her delik en fazla bir ayakta kullanılır → bir
+  parçada 8 vida = 2 ayak da yakalanır.
+- **Neden "sıralı 6-mesafe" yöntemi terk edildi:** İlk sürüm, 4 noktanın 6 ikili
+  mesafesini sıralayıp beklenen `[32,32,40,40,51.22,51.22]` listesiyle karşılaştırıyordu.
+  Bu, hangi mesafenin KENAR hangisinin KÖŞEGEN olduğu bilgisini (topolojiyi) kaybeder →
+  gerçek bir ayağı bile yanlış değerlendirebilir. Kanıt (9304-2/Object_18, gerçek FBX
+  teşhisi): panelin 12 ağaç vidasından **3'ü** (0,1,2) tam 32.00/40.00/51.22 mm'ye
+  uyuyordu ama 4. köşe **ray tespiti tarafından yanlışlıkla 'ray' sanılıp** havuzdan
+  çalınmıştı (bkz. aşağıdaki sıralama düzeltmesi) → ayak SIFIR bulunuyordu. Yeni
+  köşegen+orta-nokta yöntemi bu topolojiyi doğrudan kullanır, sıralamaya bağlı değildir.
+- **Sıralama düzeltmesi (tarihsel — artık yapısal olarak imkansız):** Bir ara sürümde
+  ray tespiti ayak tespitinden ÖNCE, aynı `ahsapcivisi` havuzu üzerinde çalışıyordu; bu
+  yüzden ray'in geniş/bağlamsız greedy mesafe eşleşmesi gerçek bir ayak köşesini "ray"
+  sanıp yutabiliyordu → o ayak 3 köşeye düşüp hiç yakalanamıyordu. Bunu, ayağı ray'den
+  ÖNCE ayıklayarak (`extract_ayak_feet()`) geçici olarak düzeltmiştik. Artık ray tespiti
+  TAMAMEN AYRI bir delik havuzunda (`RAY_DELIK_HACIM`, bkz. Ray Seti) çalıştığı için bu
+  iki havuz hiç kesişmiyor — çalınma yapısal olarak imkansız, sıralama artık önemsiz.
+- **Eski "TAM 4 vida" kuralının sorunu (ilk sürüm, artık geçerli değil):** "parçada
+  TAM 4 ağaç vidası → 1 ayak" kuralı panele **dağılmış** 4 yapısal vidayı da ayak
+  sayıyordu → *olması gerekenden fazla* (9262: **11** sayılıyordu, gerçekte ~1; dağınık
+  4'lülerin köşegeni 500–850 mm). Dikdörtgen şekli bu yanlış pozitifleri eler.
+- **Kalibrasyon:** `iki_obje_mesafe.py` ile ölçüldü (Object_55): kenarlar 32 mm ve 40 mm,
+  köşegen 51.22 mm. Başka ayak modeli çıkarsa sabitler kolayca genişletilir.
+- **Adet:** tüm parçalardaki ayak dikdörtgeni sayısı.
+- **İzolasyon:** Ayak vidaları ağaç vidası havuzunda KALIR; askılık flanşı sayımı
+  DEĞİŞMEZ (yalnızca ayak → dolayısıyla Allen ve Tıpa, ve dolaylı olarak ray/ağaç
+  vidası — yalnızca önceden YANLIŞ ray sayılan durumlarda — güncellenir).
+- **Sabitler `parca_sayim.py`:** `AYAK_KENAR_A_MM=32`, `AYAK_KENAR_B_MM=40`,
+  `AYAK_KENAR_TOL_PCT=0.03`; fonksiyonlar `extract_ayak_feet()` (asıl mantık, ray'den
+  önce çağrılır), `count_ayak_feet()` (adet-only kısayol, teşhis/test için).
 
 ### Ağaç vidası (kit adedi)
 - **Kaynak:** doğrudan delik (`ahsapcivisi` = 14.57, %5) + L bağlantı türetmesi.
-- **Kural:** `(ray dışı ağaç vidası deliği sayısı) + 4 × L bağlantı seti`.
-- **Not:** Ray delikleri de ahşap vidası boyutundadır; ray deseni tespit edilip bu
-  delikler ağaç vidası sayımından **çıkarılır** (bkz. Ray Seti).
+- **Kural:** `(ahsapcivisi havuzundaki tüm delik sayısı, ayak dahil) + 4 × L bağlantı seti`.
+- **Not (DÜZELTİLDİ):** Ray delikleri ahşap vidasıyla AYNI delik DEĞİL — kendine özgü bir
+  hacme sahipler (bkz. Ray Seti → `RAY_DELIK_HACIM`). Eskiden "ray delikleri de ahşap
+  vidası boyutunda" varsayılıp ray'ler `ahsapcivisi` havuzunda aranıyordu; bu yüzden
+  rastgele aralıklı GERÇEK ağaç vidaları tesadüfen bir ray desenine uyup yanlışlıkla
+  ray sayılabiliyor, ağaç vidası sayımından haksız yere düşülebiliyordu (kanıt:
+  `hacim_bul_raporu.txt`, Object_23 — ray'e ait delikler `[BİLİNMİYOR]`, hiçbir
+  CATEGORIES hacmiyle eşleşmiyor). Artık ray tespiti ayrı bir havuzda çalıştığı için
+  ağaç vidası havuzuna hiç dokunmaz.
 - **Şimdiki sabit:** L bağlantı = 2 (sipariş başına) → +8.
 
 ### Ray Seti (çekmece rayı)
-- **Kaynak:** geometri (`ahsapcivisi` deliklerinin ray deseninden tespiti).
+- **Kaynak:** geometri — `ahsapcivisi` DEĞİL, kendine özgü **`RAY_DELIK_HACIM`** (≈84.92,
+  %2 tolerans) hacim bandındaki deliklerin ray deseninden tespiti.
+- **Keşif (kritik düzeltme):** `hacim_bul.py` ile Object_23 taranınca ray'e ait 3 delik
+  CATEGORIES'teki hiçbir hacimle eşleşmedi (`[BİLİNMİYOR]`, hacimler: 84.9189/84.9188/
+  84.9175) — yani ray delikleri ahşap vidası (14.57) ile AYNI delik değilmiş. Eski
+  algoritma ray'i `ahsapcivisi` havuzunda arıyordu; bu yüzden gerçek ağaç vidaları
+  tesadüfen bir ray-aralık desenine uyup yanlış ray boyu buluyordu (ör. gerçek 55cm ray
+  25cm bulunuyordu). Düzeltme: ray artık SADECE `RAY_DELIK_HACIM` bandındaki delikler
+  arasından aranır; bu havuz `ahsapcivisi`/ayarlı ayak havuzuyla hiç kesişmez.
 - **Kalibrasyon:** kulp deliği modelde `0.192` birim ↔ gerçek `192 mm` → **1 birim = 1000 mm**
   (`RAY_SCALE_MM = 1000`).
-- **Kural:** Bir parçadaki ahşap vidası delikleri arasından **doğrusal** olup ardışık
-  aralıkları bir ray boyu desenine (aşağıdaki tablo, ±`RAY_TOL_MM`=8 mm) uyanlar = 1 ray.
-  Önce 3-delikli raylar, sonra kalan deliklerde 2-delikli raylar (greedy).
-- **Ray boyu → delik aralıkları (mm):** 55cm[149,222], 50cm[150,161], 45cm[152,102],
-  40cm[129,82], 35cm[77,83], 30cm[109], 25cm[188].
+- **Örüntünün kaynağı (KULLANICI ÖLÇÜMÜ — kesin):** Her ray boyunun delikleri,
+  rayla aynı doğrultudaki sabit bir REFERANS NOKTASINA göre ölçüldü. Konumlar
+  (`RAY_HOLE_POSITIONS`, mm): 55cm[63,212,434], 50cm[64,214,375], 45cm[64,216,318],
+  40cm[64,193,275], 35cm[64,141,224], 30cm[63,172], 25cm[43,231]. Ardışık farklar =
+  o boyun **imzası** (`RAY_GAPS`, koddan otomatik türetilir): 55cm[149,222],
+  50cm[150,161], 45cm[152,102], 40cm[129,82], 35cm[77,83], 30cm[109], 25cm[188].
+  **DİKKAT:** boy ile aralık DOĞRU ORANTILI DEĞİL, her imza unique. (Bir ara ben
+  [152,102]'yi yanlışlıkla 55cm sandım — o aslında **45cm**; 55cm = [149,222].)
+- **Kural:** Bir parçadaki `RAY_DELIK_HACIM` bandına giren delikler arasından
+  **doğrusal** olup ardışık aralıkları bir boyun imzasına (±`RAY_TOL_MM`=8 mm) uyanlar
+  = 1 ray. Önce 3-delikli boylar (55–35cm), sonra kalan deliklerde 2-delikli boylar
+  (30/25cm), greedy. Eşleştirme `_ray_signature_match()` ile: tüm aralıkları tolerans
+  içinde olan boylar arasından **en düşük toplam sapmalı** boy seçilir (ilk-uyan değil;
+  55/50/45'in ilk aralığı 149/150/152 çok yakın olduğundan bu ayrımı sağlamlaştırır).
 - **Adet:** aynı boydaki sol+sağ 2 ray = 1 set → **her boy için set = o boydaki ray // 2**.
   JSON'da `ray_setleri` (ör. `{"55cm": 2, "30cm": 1}`). PDF'te her boy **ayrı satır**
   ("Ray Seti 55cm", "Ray Seti 30cm"…); hiç ray yoksa tek "Ray Seti" = 0 satırı.
-- Tespit edilen raylar bu delikleri ağaç vidası havuzundan çıkarır.
-- Sabitler `parca_sayim.py`: `RAY_SCALE_MM`, `RAY_TOL_MM`, `RAY_COLINEAR_TOL_MM`, `RAY_GAPS`.
+- **İzolasyon:** `RAY_DELIK_HACIM` bandına giren ama hiçbir ray desenine uymayan
+  delikler ağaç vidası sayımına EKLENMEZ (zaten ahsapcivisi hacminde değiller);
+  ağaç vidası havuzu ray tespitinden bağımsızdır.
+- Sabitler `parca_sayim.py`: `RAY_SCALE_MM`, `RAY_TOL_MM`, `RAY_COLINEAR_TOL_MM`,
+  `RAY_HOLE_POSITIONS`, `RAY_GAPS` (konumlardan türetilir).
 
 ### Askılık flanşı
 - **Kaynak:** geometri (ağaç vidası deliklerinden).

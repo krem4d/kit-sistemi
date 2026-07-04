@@ -35,9 +35,9 @@ tutar. Sayım motoru (Faz 1+) bir deliğin/parçanın hangi parça olduğunu bu 
 
 Bu iki değer `parca_sayim.py` içindeki `CATEGORIES`/`KULP_VOL`'a işlendi.
 
-> ✅ **Ağaç vidası (ahsapcivisi) çözüldü:** güncel `delikbulma.py`'ye göre delik hacmi
-> **19.48** ve **TOLERANCE = %5**. `parca_sayim.py` bu değerlerle güncellendi. Ayak
-> tespiti (bir parçada TAM 4 ağaç vidası → 1 ayak) 8990'da doğrulandı (Object_5 → 1 ayak).
+> ✅ **Ağaç vidası (ahsapcivisi):** delik hacmi `parca_sayim.py`'de **14.57**, `%5` tolerans.
+> Ayak tespiti artık delik SAYISINA değil, 4 vidanın oluşturduğu **~32×40 mm dikdörtgene**
+> dayanır (bkz. parca_kurallari.md → Ayarlı ayak; `count_ayak_feet`).
 > Not: Ağaç vidası KİT ADEDİ ise türetmeyle hesaplanır (bkz. parca_kurallari.md), delik
 > sayısıyla değil.
 
@@ -51,6 +51,6 @@ Bu parçaların hacimleri ileride, ilgili karar/entegrasyon netleşince ölçül
 |-------|--------------------|-------------|-------|
 | Askılık flanşı | delik | — | ⛔ ertelendi |
 | Askılık borusu | delik/dummy | — | ⛔ ertelendi |
-| Ray (Set) | ahşap vidası deliği deseni (kalibrasyon 1 birim=1000 mm) | `ahsapcivisi` = 14.57 | ✅ entegre (detect_rays) |
+| Ray (Set) | kendine özgü delik deseni (kalibrasyon 1 birim=1000 mm) | `RAY_DELIK_HACIM` ≈ 84.92 (ahsapcivisi=14.57'den FARKLI — bkz. hacim_bul_raporu.txt) | ✅ entegre (detect_rays) |
 | L Bağlantı seti / vidası / dübeli | Mert ile karar | — | ⛔ ertelendi |
 | L Modül Uzun Linco Pimi | iki parçadaki birbirine dayalı linco çifti (~43 mm) | `linco` = 9680 | ✅ entegre (detect_long_linco_pins) |
