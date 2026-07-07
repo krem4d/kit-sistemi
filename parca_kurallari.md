@@ -205,9 +205,24 @@ uygular. Kaynak türleri:
 ### Arkalık çivisi
 - **Kaynak:** kalınlık-tabanlı arkalık tespiti (delik değil).
 - **Kural:** En kısa kenarı `ARKALIK_MAX_KALINLIK` (8 mm) altında olan her parça = arkalık
-  paneli (ölçüm: arkalık 5 mm, gövde 18 mm). Her arkalık panelinin çevresine
-  `CIVI_ARALIK_MM` (150 mm) aralıkla çivi: `2·ceil(W/150) + 2·ceil(H/150)`.
-- **Adet:** tüm arkalık panellerinin çivi toplamı (8974'te 7 panel → 114).
+  paneli (ölçüm: arkalık 5 mm, gövde 18 mm).
+- **İkiye bölünmüş arkalıkların birleştirilmesi:** paketleme için ikiye
+  kesilip bantlanan/katlanan arkalıklar FBX'te aynı arkalığa ait İKİ AYRI mesh
+  parçası (aynı hacimde) olarak görünür. Çivi sayımından ÖNCE, arkalık
+  adayları arasında HEM hacmi `ARKALIK_ESLESME_TOL` (%3) içinde eşleşen HEM DE
+  tam bir yüzeyde temas halinde olan çiftler bulunur ve `bpy.ops.object.join`
+  ile TEK parçada birleştirilir (`pair_split_arkalik`); çivi sayımı bu
+  birleşmiş/tekil nihai parça listesi üzerinden yapılır. Eşleşmeyen adaylar
+  zaten tek parça olduğu için oldukları gibi kalır.
+  - **Neden sadece hacim yetmiyor:** müşteri aynı boyda 2 AYRI modül sipariş
+    edebilir — bu da aynı hacimde 2 arkalık demektir ama bunlar GERÇEKTEN ayrı
+    paneldir, birleştirilmemeli. Ek şart: adaylar bir eksende SIFIR boşlukla
+    bitişik VE diğer iki eksende TAM örtüşen bir yüzeye sahip olmalı
+    (`_tam_yuzey_temasi`, tolerans `ARKALIK_TEMAS_TOL_MM` = 2 mm) — gerçek
+    ikiye-kesilmiş yarılar kesim hattı boyunca böyle tam yapışık durur.
+- Her (birleşmiş veya tekil) arkalık panelinin çevresine `CIVI_ARALIK_MM`
+  (150 mm) aralıkla çivi: `2·ceil(W/150) + 2·ceil(H/150)`.
+- **Adet:** tüm arkalık panellerinin (birleştirmeden sonraki) çivi toplamı.
 - Ayarlanabilir sabitler `parca_sayim.py` başında. Aralık (150 mm) orijinal 0.15 m
   kuralının mm karşılığı; gerçek sayımla kıyaslayıp ince ayar yapılabilir.
 

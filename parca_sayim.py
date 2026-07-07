@@ -111,6 +111,21 @@ LONG_LINCO_AXIS_MIN = 0.985   # bağlantı doğrusunun en yakın eksene hizası 
 ARKALIK_MAX_KALINLIK = 8.0   # en kısa kenar <= bu ise arkalık paneli sayılır
 CIVI_ARALIK_MM = 150.0       # arkalık çivisi aralığı (orijinal 0.15 m kuralının mm karşılığı)
 
+# Bazı arkalık panelleri paketleme kolaylığı için üretimde İKİYE KESİLİP
+# bantlanıp/katlanıp gönderiliyor; FBX'te bu, aynı arkalığın İKİ AYRI mesh
+# parçası (yarım-yarım, birbirleriyle AYNI HACİMDE) olarak görünüyor. Çivi
+# sayımından önce bu çiftler TEK PARÇA mesh'te birleştirilmeli — yoksa boyut
+# (W×H) yarım okunur ve çivi sayısı yanlış (iki kez, küçük panelmiş gibi) çıkar.
+#
+# ÖNEMLİ — sadece HACİM eşleşmesi YETERLİ DEĞİL: müşteri aynı boyda 2 ayrı
+# modül sipariş edebilir (bu da aynı hacimde 2 AYRI arkalık demektir, ama
+# bunlar GERÇEKTEN ayrı paneldir, birleştirilmemeli). Ayrım için EK şart:
+# adaylar TAM BİR YÜZEYDE birbirine temas etmeli (bkz. _tam_yuzey_temasi) —
+# gerçek ikiye-kesilmiş yarılar, kesim hattı boyunca sıfır boşlukla ve tam
+# örtüşerek bitişir; ayrı modüllerin arkalıkları bunu sağlamaz.
+ARKALIK_ESLESME_TOL = 0.03   # %3 — aynı arkalığın iki yarısı aynı hacimde olmalı
+ARKALIK_TEMAS_TOL_MM = 2.0   # mm — temas/örtüşme için izin verilen sıfıra-yakın sapma
+
 # ── Sabit varsayımlar (şimdilik) ─────────────────────────────────────────────
 L_BAGLANTI_ADET = 2          # her sipariş için 2 L bağlantı seti (set+vida+dübel dahil)
 
@@ -625,6 +640,86 @@ def arkalik_civi_count(obj):
     return 2 * nx + 2 * nz
 
 
+def mesh_volume(obj):
+    """Kapalı mesh'in dünya-uzayı hacmi (arkalık yarım-parça eşleştirme için;
+    delik hacminden FARKLI — burada parçanın TÜMÜNÜN hacmi ölçülür)."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    bm.transform(obj.matrix_world)
+    vol = abs(bm.calc_volume())
+    bm.free()
+    return vol
+
+
+def _world_aabb(obj):
+    """Objenin dünya-uzayı eksene-hizalı kutusu (min, max) — Vector çifti
+    (world_center'daki gibi bound_box köşeleri matrix_world ile dönüştürülür)."""
+    wb = [obj.matrix_world @ mathutils.Vector(v) for v in obj.bound_box]
+    xs = [c.x for c in wb]; ys = [c.y for c in wb]; zs = [c.z for c in wb]
+    return (mathutils.Vector((min(xs), min(ys), min(zs))),
+            mathutils.Vector((max(xs), max(ys), max(zs))))
+
+
+def _tam_yuzey_temasi(a, b):
+    """a ve b TAM bir yüzeyde temas halinde mi? (aynı arkalığın gerçek
+    ikiye-kesilmiş yarıları böyle durur: bir eksende SIFIR boşlukla bitişik,
+    diğer İKİ eksende TAM örtüşen — yani kesim hattı boyunca tam yapışık.
+
+    Sadece hacim eşleşmesi yeterli değil: müşteri aynı boyda 2 AYRI modül
+    sipariş edebilir (aynı hacimde ama gerçekten ayrı arkalık) — bunlar genelde
+    tam bu şekilde bitişmez/örtüşmez, bu yüzden bu ek kontrol onları eler."""
+    amin, amax = _world_aabb(a)
+    bmin, bmax = _world_aabb(b)
+    tol = ARKALIK_TEMAS_TOL_MM / RAY_SCALE_MM
+    for eksen in range(3):
+        digerleri = [e for e in range(3) if e != eksen]
+        bitisik = (abs(amax[eksen] - bmin[eksen]) <= tol or
+                   abs(bmax[eksen] - amin[eksen]) <= tol)
+        if not bitisik:
+            continue
+        if all(abs(amin[e] - bmin[e]) <= tol and abs(amax[e] - bmax[e]) <= tol
+               for e in digerleri):
+            return True
+    return False
+
+
+def pair_split_arkalik(parts):
+    """Paketleme için ikiye kesilip bantlanan/katlanan arkalık panellerini
+    tespit edip TEK PARÇA mesh'te birleştirir.
+
+    Yöntem: arkalık adayları arasından hem (a) hacmi birbirine ARKALIK_ESLESME_TOL
+    içinde eşit olan HEM DE (b) tam bir yüzeyde temas halinde olan (bkz.
+    _tam_yuzey_temasi) ikilileri bul, bpy.ops.object.join ile tek objede
+    birleştir. Eşleşmeyen adaylar zaten bölünmemiş (tek parça) arkalık paneli
+    olarak oldukları gibi döner.
+
+    Returns: nihai arkalık parça listesi (birleşmiş + tekil), çivi sayımına
+    hazır."""
+    kalan = list(parts)
+    sonuc = []
+    while kalan:
+        o = kalan.pop(0)
+        vo = mesh_volume(o)
+        eslesen = None
+        for i, o2 in enumerate(kalan):
+            if (abs(mesh_volume(o2) - vo) <= vo * ARKALIK_ESLESME_TOL
+                    and _tam_yuzey_temasi(o, o2)):
+                eslesen = i
+                break
+        if eslesen is not None:
+            o2 = kalan.pop(eslesen)
+            bpy.ops.object.select_all(action='DESELECT')
+            o.select_set(True)
+            o2.select_set(True)
+            bpy.context.view_layer.objects.active = o
+            bpy.ops.object.join()
+            sonuc.append(o)
+        else:
+            sonuc.append(o)
+    return sonuc
+
+
 # ── Bellek (işlem geçmişi) ───────────────────────────────────────────────────
 def order_from_name(fbx_path):
     """Dosya adından sipariş no'yu çıkar (import gerektirmez → atlama kontrolü için)."""
@@ -688,13 +783,24 @@ def count_order(order):
     ray_isimleri = []           # tespit edilen ray boyları (ör. "55cm", "30cm")
     part_count = len(meshes)
 
+    # Arkalık adaylarını (kalınlıktan) diğer parçalardan ayır. Paketleme için
+    # ikiye kesilmiş arkalıklar varsa (aynı hacimde çift) önce tek parçada
+    # birleştirilir, ANCAK BUNDAN SONRA çivi sayılır — yoksa yarım panel
+    # boyutuyla (W×H) yanlış çivi sayısı çıkar.
+    arkalik_adaylari = []
+    diger_parcalar = []
     for o in meshes:
-        # Arkalık paneli mi? (kalınlıktan) → çivi say, delik taramasını atla
         th = part_thickness(o)
         if th is not None and th <= ARKALIK_MAX_KALINLIK:
-            arkalik_civi += arkalik_civi_count(o)
-            continue
+            arkalik_adaylari.append(o)
+        else:
+            diger_parcalar.append(o)
 
+    arkalik_parcalari = pair_split_arkalik(arkalik_adaylari)
+    for o in arkalik_parcalari:
+        arkalik_civi += arkalik_civi_count(o)
+
+    for o in diger_parcalar:
         # Delikler
         try:
             holes = execute_double_boolean(o)
@@ -768,8 +874,13 @@ def count_order(order):
     frensiz = mentese_tabani - frenli
     raf_pimi = counts["rafpimi"] // 3     # her raf pimi = 3 delik
     l_baglanti = L_BAGLANTI_ADET
-    # Ağaç vidası = (ray'lar çıkarılmış) delik sayısı + her L bağlantı seti için 4 adet
-    agac_vidasi = counts["ahsapcivisi"] + 4 * l_baglanti
+    # Ray'lerde kullanılan delik sayısı (RAY_DELIK_HACIM havuzundan, ahsapcivisi
+    # havuzuna hiç girmedi — ama ray varsa o rayların delikleri de birer vidayla
+    # kapatıldığından, genel ağaç vidası adedinden düşülür).
+    ray_delik_toplam = sum(len(RAY_HOLE_POSITIONS[name]) for name in ray_isimleri)
+    # Ağaç vidası = doğrudan hacimden sayılan delik sayısı + her L bağlantı seti
+    # için 4 adet − ray'lerde kullanılan delik sayısı.
+    agac_vidasi = counts["ahsapcivisi"] + 4 * l_baglanti - ray_delik_toplam
     askilik_borusu = askilik_flansi // 2     # her 2 flanşı için 1 boru
     ray_adet = len(ray_isimleri)             # tespit edilen tekil ray sayısı
     ray_counter = Counter(ray_isimleri)      # boya göre tekil ray sayısı
