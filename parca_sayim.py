@@ -78,6 +78,15 @@ TOLERANCE = 0.05           # %5 (güncel delikbulma.py ile aynı)
 KULP_DELIK_MESAFE = 0.192  # m — kulp deliği çifti arasındaki sabit mesafe (192 mm)
 KULP_DELIK_TOL = 0.05      # %5 tolerans (±~10 mm)
 
+# ── Modül-modül bağlantı deliği çifti (kulp'tan arta kalan modulbaglanti
+# delikleri arasında) ─────────────────────────────────────────────────────
+# Ölçüm (diag_modul_mesafe.py, gerçek FBX'ler): iki AYRI modülün birbirine
+# dayanan panellerindeki modül bağlantı delikleri TAM 18.000 mm ayrı; bir
+# sonraki en yakın (alakasız) mesafe 136mm+ — net bir ayrım var, bu yüzden
+# dar (±%0.1) bir kesin-mesafe toleransı güvenli.
+MODUL_BAGLANTI_MESAFE = 0.018   # m — modül bağlantı deliği çifti arası sabit mesafe (18 mm)
+MODUL_BAGLANTI_TOL = 0.001      # %0.1 tolerans
+
 # ── Ray deliği hacmi (ahşap vidasından FARKLI, kendine özgü delik) ───────────
 # Keşif (hacim_bul_raporu.txt, Object_23): ray'e ait delikler CATEGORIES'teki
 # hiçbir hacimle eşleşmiyor ([BİLİNMİYOR]) — 3 delik: 84.9189 / 84.9188 / 84.9175.
@@ -341,22 +350,36 @@ def hole_signed_direction(panel_obj, hole_obj):
     return best if best is not None else axis
 
 
-def pair_count(centers, threshold=0.2):
-    """Yakınlık (<threshold) ile A-B çift sayısı (delikbulma.py mantığı)."""
-    unmatched = list(centers)
+def detect_modul_baglanti_pairs(centers):
+    """Kulp'tan arta kalan modulbaglanti delikleri arasından GERÇEK modül-modül
+    bağlantı çiftlerini ayır.
+
+    ESKİ yöntem (pair_count) "en yakın komşu, 200mm eşik altında" mantığıyla
+    greedy eşleştiriyordu — bu, birbirine hiç bağlı OLMAYAN ama tesadüfen en
+    yakın düşen delikleri de (ör. 136-137mm mesafedeki farklı modül köşe
+    delikleri) yanlışlıkla çift sayıyordu (bkz. Algoritmaların_testi.md).
+
+    GERÇEK modül-modül bağlantısı: iki AYRI modülün birbirine dayanan
+    panellerindeki modül bağlantı delikleri TAM MODUL_BAGLANTI_MESAFE (18mm,
+    ±%0.1 tolerans) kadar birbirinden uzaktadır — ölçüm (diag_modul_mesafe.py)
+    gerçek çiftlerin tam 18.000mm, bir sonraki en yakın (alakasız) mesafenin
+    ise 136mm+ olduğunu gösterdi; net bir ayrım var. Bu yüzden yakınlık yerine
+    KESİN mesafe eşleşmesi kullanılır (detect_kulp_pairs ile aynı desen)."""
+    lo = MODUL_BAGLANTI_MESAFE * (1 - MODUL_BAGLANTI_TOL)
+    hi = MODUL_BAGLANTI_MESAFE * (1 + MODUL_BAGLANTI_TOL)
+    used = [False] * len(centers)
     pairs = 0
-    while len(unmatched) >= 2:
-        h1 = unmatched.pop(0)
-        best_idx = None
-        min_dist = 9999.0
-        for i, h2 in enumerate(unmatched):
-            d = (h1 - h2).length
-            if d < min_dist:
-                min_dist = d
-                best_idx = i
-        if best_idx is not None and min_dist < threshold:
-            unmatched.pop(best_idx)
-            pairs += 1
+    for i in range(len(centers)):
+        if used[i]:
+            continue
+        for j in range(i + 1, len(centers)):
+            if used[j]:
+                continue
+            d = (centers[i] - centers[j]).length
+            if lo <= d <= hi:
+                used[i] = used[j] = True
+                pairs += 1
+                break
     return pairs
 
 
@@ -863,7 +886,7 @@ def count_order(order):
         if part_linco_holes:
             linco_holes_by_part.append(part_linco_holes)
 
-    pairs = pair_count(modulbag_centers)
+    pairs = detect_modul_baglanti_pairs(modulbag_centers)
     # Farklı parçalardaki birbirine dayalı + yönü hizalı linco çiftleri → uzun linco pimi
     uzun_linco_pim = detect_long_linco_pins(linco_holes_by_part)
 

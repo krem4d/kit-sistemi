@@ -27,8 +27,23 @@ uygular. Kaynak türleri:
 - **Doğrulama:** `frenli + frensiz == toplam menteşe tabanı`.
 
 ### Modülleri birbirine bağlama aparatı
-- **Kaynak:** delik (`modulbaglanti` = 351.35), A–B çift eşleştirmesi (mevcut).
-- **Adet:** eşleşen **A–B çift** sayısı (her çift = 1 aparat).
+- **Kaynak:** delik (`modulbaglanti` hacmi = 351.35, %5 tol).
+- **Kural:** Önce her parçanın kendi `modulbaglanti`-hacimli delikleri arasından
+  **kulp (tutamak) çiftleri** ayıklanır (bkz. Kulp bölümü, ~192mm ±%5) — kulp
+  delikleri modül bağlantısı SAYILMAZ. Kalan (kulp OLMAYAN) delikler TÜM
+  parçalar arasında havuzlanır ve **TAM `MODUL_BAGLANTI_MESAFE` (18mm) ±%0.1**
+  mesafede olan ikililer eşleştirilir (`detect_modul_baglanti_pairs`); her
+  eşleşen çift = 1 modül-modül bağlantı aparatı.
+  - **Neden kesin mesafe (eski yöntem yerine):** eski `pair_count` "en yakın
+    komşu, 200mm eşik altında" mantığıyla greedy eşleştiriyordu — bu, gerçekte
+    birbirine bağlı OLMAYAN ama tesadüfen en yakın düşen delikleri de (görsel
+    teşhis + `diag_modul_mesafe.py` ölçümü: gerçek çiftler TAM 18.000mm, bir
+    sonraki en yakın alakasız mesafe 101-136mm+) yanlışlıkla çift sayıyordu
+    (bkz. `Algoritmaların_testi.md`). Gerçek modül-modül bağlantı delikleri
+    arasında net bir mesafe imzası (tam 18mm) olduğu için kesin-mesafe
+    eşleştirmesi bu hatayı ortadan kaldırır; eşi (tam 18mm'de) bulunamayan
+    delik artık YANLIŞ bir komşuya eşlenmek yerine eşleşmemiş kalır.
+- **Adet:** eşleşen **çift** sayısı (her çift = 1 aparat).
 
 ### Raf pimi
 - **Kaynak:** delik (`rafpimi` = 234).

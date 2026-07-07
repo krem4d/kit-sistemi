@@ -4,17 +4,20 @@ olarak test etmek için Empty koyan araç.
 
 AMAÇ: parca_sayim.py'deki GERÇEK algoritmayı (çift-boolean ile delik bulma →
 modulbaglanti hacim kategorisi → aynı parçadaki kulp (tutamak) çiftlerini
-ayıkla → kalan modül-bağlantı deliklerini TÜM parçalar arasında en-yakın
-komşuya göre eşleştir) BİREBİR aynı mantıkla çalıştırır ve:
+ayıkla → kalan modül-bağlantı deliklerini TÜM parçalar arasında TAM 18mm
+(±%0.1) mesafeli olanlar eşleştir) BİREBİR aynı mantıkla çalıştırır ve:
     1) Her parçadaki HAM modulbaglanti deliği merkezine küçük bir KÜRE Empty
        koyar ("moduladay_...").
     2) Aynı parçada kulp (tutamak, 192mm ±%5 mesafeli çift) olarak ayıklanan
        delik çiftlerinin ortasına bir KÜP Empty koyar ("kulp_ÇİFT#i").
     3) Kalan (kulp OLMAYAN) modül-bağlantı delikleri arasında, gerçek
-       algoritmanın (pair_count, eşik=0.2) ürettiği eşleşmiş ÇİFTlerin
-       ortasına bir KÜP Empty koyar ("moduller_baglama_ÇİFT#i").
-    4) Eşiğin içinde eşi bulunamayan (tek kalan) modül-bağlantı deliğine ayrı
-       bir KÜP Empty koyar ("moduller_baglama_ESLESMEMIS#i").
+       algoritmanın (detect_modul_baglanti_pairs, TAM 18mm ±%0.1 mesafe)
+       ürettiği eşleşmiş ÇİFTlerin ortasına bir KÜP Empty koyar
+       ("moduller_baglama_ÇİFT#i").
+    4) Eşi (tam 18mm mesafede) bulunamayan modül-bağlantı deliğine ayrı bir
+       KÜP Empty koyar ("moduller_baglama_ESLESMEMIS#i") — ESKİ algoritmada
+       bunlar yanlışlıkla en-yakın-komşuya (136mm+ uzaklıktaki alakasız bir
+       deliğe) eşleniyordu, artık eşlenmiyor.
 Konsola "Modülleri Birbirine Bağlama" adedi (gerçek pipeline'daki "adet"
 sözlüğündeki değerle AYNI olmalı) ve kulp adedi basılır.
 
@@ -31,9 +34,9 @@ NOT: Gerçek algoritma gibi bu araç da her parça için GEÇİCİ boolean
      mesh'lere DOKUNULMAZ, sahne kalıcı olarak bozulmaz (production'daki
      `bpy.data.objects.remove` ile aynı temizlik burada da yapılır).
 NOT: Sabitler (CATEGORIES["modulbaglanti"], TOLERANCE, KULP_DELIK_MESAFE,
-     KULP_DELIK_TOL, ARKALIK_MAX_KALINLIK, pair_count eşiği) parca_sayim.py
-     ile AYNI değerde, buraya birebir kopyalanmıştır — parca_sayim.py'ye
-     dokunulmadı.
+     KULP_DELIK_TOL, ARKALIK_MAX_KALINLIK, MODUL_BAGLANTI_MESAFE,
+     MODUL_BAGLANTI_TOL) parca_sayim.py ile AYNI değerde, buraya birebir
+     kopyalanmıştır — parca_sayim.py'ye dokunulmadı.
 """
 
 import bpy
@@ -46,7 +49,8 @@ TOLERANCE = 0.05
 KULP_DELIK_MESAFE = 0.192   # m — kulp deliği çifti arasındaki sabit mesafe
 KULP_DELIK_TOL = 0.05       # %5 tolerans
 ARKALIK_MAX_KALINLIK = 8.0  # arkalık panelleri (kalınlıktan) sayıma hiç girmez
-PAIR_THRESHOLD = 0.2        # pair_count eşleştirme mesafe eşiği (dünya birimi)
+MODUL_BAGLANTI_MESAFE = 0.018   # m — modül bağlantı deliği çifti arası sabit mesafe (18 mm)
+MODUL_BAGLANTI_TOL = 0.001      # %0.1 tolerans
 
 ADAY_EMPTY_BOYUT = 0.008
 CIFT_EMPTY_BOYUT = 0.02
@@ -167,27 +171,26 @@ def detect_kulp_pairs(centers):
     return kulp_ciftleri, remaining
 
 
-def pair_count_detailed(centers, threshold=PAIR_THRESHOLD):
-    """pair_count ile AYNI greedy mantık, ama gerçek Vector çiftlerini de
+def detect_modul_baglanti_pairs_detailed(centers):
+    """detect_modul_baglanti_pairs (parca_sayim.py) ile AYNI KESİN-mesafe
+    (18mm ±%0.1) eşleştirme mantığı, ama gerçek Vector çiftlerini de
     döndürür: (ciftler [(c1,c2),...], eslesmemis [c,...])."""
-    unmatched = list(centers)
+    lo = MODUL_BAGLANTI_MESAFE * (1 - MODUL_BAGLANTI_TOL)
+    hi = MODUL_BAGLANTI_MESAFE * (1 + MODUL_BAGLANTI_TOL)
+    used = [False] * len(centers)
     ciftler = []
-    eslesmemis = []
-    while len(unmatched) >= 2:
-        h1 = unmatched.pop(0)
-        best_idx = None
-        min_dist = 9999.0
-        for i, h2 in enumerate(unmatched):
-            d = (h1 - h2).length
-            if d < min_dist:
-                min_dist = d
-                best_idx = i
-        if best_idx is not None and min_dist < threshold:
-            h2 = unmatched.pop(best_idx)
-            ciftler.append((h1, h2))
-        else:
-            eslesmemis.append(h1)
-    eslesmemis.extend(unmatched)
+    for i in range(len(centers)):
+        if used[i]:
+            continue
+        for j in range(i + 1, len(centers)):
+            if used[j]:
+                continue
+            d = (centers[i] - centers[j]).length
+            if lo <= d <= hi:
+                used[i] = used[j] = True
+                ciftler.append((centers[i], centers[j]))
+                break
+    eslesmemis = [c for i, c in enumerate(centers) if not used[i]]
     return ciftler, eslesmemis
 
 
@@ -251,8 +254,8 @@ def main():
         mid = (c1 + c2) / 2.0
         add_empty(f"kulp_CIFT#{i}", mid, CIFT_EMPTY_BOYUT, disp='CUBE')
 
-    # Kalan modül-bağlantı deliklerini TÜM parçalar arasında eşleştir
-    ciftler, eslesmemis = pair_count_detailed(remaining_all)
+    # Kalan modül-bağlantı deliklerini TÜM parçalar arasında TAM 18mm mesafeyle eşleştir
+    ciftler, eslesmemis = detect_modul_baglanti_pairs_detailed(remaining_all)
 
     for i, (c1, c2) in enumerate(ciftler):
         mid = (c1 + c2) / 2.0
