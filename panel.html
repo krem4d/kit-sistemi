@@ -271,6 +271,7 @@ header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:
 .kart-baslik-sag{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .kart-link{font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);}
 .kart-link:hover{border-color:var(--accent);}
+.kart-yok{font-size:11px;font-weight:600;color:var(--muted);border:1px dashed var(--border);padding:2px 8px;border-radius:var(--radius-pill);white-space:nowrap;}
 
 .kart-govde{padding:2px 14px;}
 .kart-durum-mesaj{padding:14px 0;font-size:14px;}
@@ -416,6 +417,10 @@ function hucreDeger(adet, gram, key){
     if (g !== null && g !== undefined) return s + ' / ' + fmtSayi(g);
   }
   return s;
+}
+function mbStr(b){
+  if (b === null || b === undefined) return '';
+  return b >= 1e6 ? (b/1e6).toFixed(1).replace('.',',')+' MB' : Math.round(b/1e3)+' KB';
 }
 function zamanStr(epoch){
   if (!epoch) return '—';
@@ -648,7 +653,8 @@ function notImzaParcasi(no){
   return m ? (m.metin + '@' + (m.zaman || '')) : '';
 }
 function siparisImza(o){
-  return [o.durum, o.pdf?1:0, o.ozet_no??'', dictImza(o.adet), dictImza(o.gram), dictImza(o.ray_setleri), checklistImzaParcasi(o.no), notImzaParcasi(o.no)].join('|');
+  return [o.durum, o.pdf?1:0, o.ozet_no??'', dictImza(o.adet), dictImza(o.gram), dictImza(o.ray_setleri), checklistImzaParcasi(o.no), notImzaParcasi(o.no),
+          (o.fbx||[]).map(f=>f.ad+':'+f.boyut).join(','), o.video ? o.video.ad+':'+o.video.boyut : ''].join('|');
 }
 function stripImza(o){
   const {tamam,toplam} = kartTamamToplam(o);
@@ -696,10 +702,15 @@ function kartBaslikHtml(o, tamam, toplam){
     : (o.durum==='islendi' ? '<span class="badge badge-serious"><span class="dot"></span>PDF yok</span>' : '');
   const ozetBtn = o.ozet_no
     ? '<a class="kart-link" href="/pdf/ozet/'+o.ozet_no+'" target="_blank" rel="noopener">Özet '+o.ozet_no+'</a>' : '';
+  const fbxBtn = (o.fbx || []).map((f, i) =>
+    '<a class="kart-link" href="/fbx/'+encodeURIComponent(f.ad)+'" download title="'+esc(f.ad)+' — '+mbStr(f.boyut)+'">FBX'+((o.fbx.length>1)?' '+(i+1):'')+'</a>').join('');
+  const videoBtn = o.video
+    ? '<a class="kart-link" href="/video/'+encodeURIComponent(o.no)+'" target="_blank" rel="noopener" title="'+esc(o.video.ad)+' — '+mbStr(o.video.boyut)+'">Video</a>'
+    : '<span class="kart-yok" title="Drive klasöründe '+esc(o.no)+'.mp4 bulunamadı">Video yok</span>';
   const parcaBilgi = o.parca ? '<span class="kart-parca-sayisi muted">'+o.parca+' parça</span>' : '';
   return '<span class="kart-no">'+esc(o.no)+'</span>'+parcaBilgi
     + '<span class="badge badge-'+m.sinif+'"><span class="dot"></span>'+esc(m.etiket)+'</span>'
-    + '<span class="kart-baslik-sag">'+ilerlemeHtml(tamam,toplam)+pdfBtn+ozetBtn+'</span>';
+    + '<span class="kart-baslik-sag">'+ilerlemeHtml(tamam,toplam)+pdfBtn+ozetBtn+fbxBtn+videoBtn+'</span>';
 }
 function notBolumHtml(no){
   const m = notMap[no] || {metin:'', zaman:null};

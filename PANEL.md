@@ -6,7 +6,8 @@ bir web paneli. Sadece Python standart kütüphanesi kullanır — ek paket
 kurulumu gerekmez.
 
 Panel boru hattına karşı **salt okurdur**: `fbx/`, `jsons/`, `pdf/`,
-`islem_gecmisi.json` yalnızca okunur. Yazdığı tek dosya `data/panel_checklist.json`'dur.
+`islem_gecmisi.json`, `video_envanteri.json` yalnızca okunur. Yazdığı dosyalar
+`data/panel_checklist.json` ile `data/panel_notlar.json`'dur.
 `adaptx.service`/`adaptx.timer` ve rclone cron'una hiçbir şekilde dokunmaz;
 `adaptx-panel.service` içindeki `ProtectSystem=strict` + `ReadWritePaths=data/`
 bunu systemd seviyesinde yapısal olarak garanti eder (panel bir hataya düşse bile
@@ -95,6 +96,22 @@ PDF'lerde de geçerlidir (`pdf_uret.py` her turda özetleri bu sırayla baştan
 üretir; araya sonradan eklenen sipariş doğru yere oturur ve kayan sayfalar
 kendiliğinden yenilenir).
 
+Kart başlığındaki linkler: **PDF** (sipariş PDF'i), **Özet N** (özet sayfası),
+**FBX** (kaynak modeli indirir; sipariş başına birden çok fbx varsa FBX 1/2…),
+**Video** (montaj videosunu tarayıcıda oynatır). Videosu olmayan siparişte
+sönük bir "Video yok" göstergesi durur; böylece Drive'a videosu yüklenmemiş
+siparişler panelden tek bakışta görülür.
+
+Videolar **diske indirilmez**: `fbx_indir.sh` her dakikalık turunda Drive
+giriş klasöründeki `<sipariş_no>.mp4` dosyalarının yalnızca ENVANTERİNİ
+(`video_envanteri.json`, atomik yazım) çıkarır; "Video var/yok" göstergesi
+bu dosyadan gelir, panel Drive'a sorgu atmaz. Oynatma anında ise video
+Drive'dan **doğrudan akıtılır**: sunucu HTTP Range isteğini
+`rclone cat --offset/--count`e çevirir (sarma/atlama çalışır), veri diske
+yazılmadan tarayıcıya geçer; eşzamanlı akış sayısı 3 ile sınırlıdır
+(tek çekirdek + `MemoryMax=256M`). Uçlar: `/fbx/<dosya-adı>` (indirme,
+yerelden) ve `/video/<sipariş-no>` (oynatma, Drive'dan akış).
+
 13 tema vardır; başlıktaki isimli tema menüsünden seçilir: **Uzay**
 (varsayılan), **Obsidyen** (kullanıcının Obsidian ekran görüntüsünden piksel
 örneklemeyle alındı: Catppuccin Frappé zemin/metin + parlak turkuaz vurgu +
@@ -134,6 +151,8 @@ başlar — kanıt kaybolmaz, `data/` klasörüne bakıp elle kurtarabilirsin.
 ## 8) Yol uyumu
 
 `ADAPTX_BASE` diğer servislerle aynı mantığı kullanır (SERVIS.md'ye bakınız):
-panel `ADAPTX_BASE=/opt/adaptx` altındaki `fbx/`, `jsons/`, `pdf/`,
+panel `ADAPTX_BASE=/opt/adaptx` altındaki `fbx/`, `jsons/`, `pdf/`, `videolar/`,
 `islem_gecmisi.json`'u okur. Farklı bir yola kurulursa `adaptx-panel.service`
 içindeki `ADAPTX_BASE`'i (ve `ReadWritePaths`'i) ona göre güncelle.
+`video_envanteri.json`'u yazan `fbx_indir.sh`'ın kurulu kopyası
+`/usr/local/bin/fbx_indir.sh`'tır (cron, her dakika); repodaki kopya referanstır.

@@ -7,6 +7,8 @@ fbx/
 jsons/
 # üretilen PDF'ler
 pdf/
+# montaj videosu envanteri (fbx_indir.sh her dakika yeniden yazar)
+video_envanteri.json
 # servis belleği (özet sıralaması)
 islem_gecmisi.json
 # proje yedekleri (büyük, elle alınır)
