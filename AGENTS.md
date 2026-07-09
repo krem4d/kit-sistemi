@@ -231,6 +231,10 @@ runs it in the GUI → analyze the report → then build/adjust the pipeline rul
 - `linco_uzun_pim_teshis.py` — scans the whole scene, places named Empties at long-pin
   candidates tagged `MATCH` / `near` (distance) / `axis_bad` (not axis-aligned) /
   `face_bad` (not facing) for visual verification.
+- `collider_kutusu_goster.py` — for selected parts, runs the pipeline's exact
+  `get_perfect_local_bounds` bounding-box calc and drops a real (wireframe, ×1.0 scale)
+  mesh box named `ColliderBox_<part>` into the scene at the object's transform, so the
+  hole-detection collider box can be visually checked against the actual part geometry.
 
 ---
 

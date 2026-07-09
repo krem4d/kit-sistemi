@@ -352,6 +352,7 @@ footer.altbilgi{text-align:center;color:var(--muted);font-size:11px;padding:12px
   <div class="toolbar">
     <input id="aramaKutu" class="arama" type="search" placeholder="Sipariş no ara…  ( / )">
     <div id="filtreBar" class="chips"></div>
+    <button id="bitenGizleBtn" class="chip" type="button" title="Animasyonu olan ve tüm küçük parçaları işaretlenmiş siparişleri sekmelerden gizle">Bitenleri gizle</button>
     <button id="yonBtn" class="btn ghost sm" type="button">↓ No</button>
   </div>
 
@@ -396,6 +397,8 @@ const DURUM_META = {
 let lastData = null;
 let filtre = 'tumu';
 let arama = '';
+let bitenGizle = true;
+try{ const kayitli = localStorage.getItem('adaptx_biten_gizle'); if (kayitli !== null) bitenGizle = kayitli === '1'; }catch(e){}
 let siralamaYonu = 'azalan';  /* sunucu azalan gönderir (en büyük no en başta) */
 const checklistMap = {};   /* no -> {parca: iso|null} — sunucudan sürekli beslenen yerel önbellek */
 const ucusta = new Set();  /* "no|parca" — yalnızca POST uçuştayken geçersiz kılma sinyali */
@@ -713,7 +716,7 @@ function kartBaslikHtml(o, tamam, toplam){
   const fbxBtn = (o.fbx || []).map((f, i) =>
     '<a class="kart-link" href="/fbx/'+encodeURIComponent(f.ad)+'" download title="'+esc(f.ad)+' — '+mbStr(f.boyut)+'">FBX'+((o.fbx.length>1)?' '+(i+1):'')+'</a>').join('');
   const animasyonBtn = o.video
-    ? '<a class="rozet-animasyon rozet-var" href="/video/'+encodeURIComponent(o.no)+'" target="_blank" rel="noopener" title="'+esc(o.video.ad)+' — '+mbStr(o.video.boyut)+'"><span class="dot" aria-hidden="true"></span>Animasyon</a>'
+    ? '<a class="rozet-animasyon rozet-var" href="/video/'+encodeURIComponent(o.no)+'" download="'+esc(o.no)+'.mp4" title="'+esc(o.video.ad)+' — '+mbStr(o.video.boyut)+'"><span class="dot" aria-hidden="true"></span>Animasyon</a>'
     : '<span class="rozet-animasyon rozet-yok" title="Drive klasöründe '+esc(o.no)+'.mp4 bulunamadı"><span class="dot" aria-hidden="true"></span>Animasyon</span>';
   const parcaBilgi = o.parca ? '<span class="kart-parca-sayisi muted">'+o.parca+' parça</span>' : '';
   return '<span class="kart-no">'+esc(o.no)+'</span>'+parcaBilgi
@@ -880,6 +883,10 @@ function gecer(r){
   if (filtre==='hatali') return r.durum==='hatali';
   if (filtre==='eksik'){ const {tamam,toplam}=kartTamamToplam(r); return toplam>0 && tamam<toplam; }
   if (filtre==='tamam'){ const {tamam,toplam}=kartTamamToplam(r); return toplam>0 && tamam===toplam; }
+  if (bitenGizle){
+    const {tamam,toplam} = kartTamamToplam(r);
+    if (r.video && toplam>0 && tamam===toplam) return false;
+  }
   return true;
 }
 function gorunurlukUygula(liste){
@@ -1041,6 +1048,15 @@ document.getElementById('filtreBar').addEventListener('click', (e) => {
 });
 document.getElementById('aramaKutu').addEventListener('input', (e) => {
   arama = e.target.value;
+  if (lastData) render(lastData);
+});
+const bitenGizleBtnEl = document.getElementById('bitenGizleBtn');
+function bitenGizleBtnCiz(){ bitenGizleBtnEl.classList.toggle('chip-aktif', bitenGizle); }
+bitenGizleBtnCiz();
+bitenGizleBtnEl.addEventListener('click', () => {
+  bitenGizle = !bitenGizle;
+  try{ localStorage.setItem('adaptx_biten_gizle', bitenGizle ? '1' : '0'); }catch(e){}
+  bitenGizleBtnCiz();
   if (lastData) render(lastData);
 });
 document.getElementById('yonBtn').addEventListener('click', () => {

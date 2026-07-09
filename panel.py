@@ -693,7 +693,7 @@ class PanelIstek(BaseHTTPRequestHandler):
             self.send_header("Accept-Ranges", "bytes")
             if kod == 206:
                 self.send_header("Content-Range", f"bytes {bas}-{son}/{boyut}")
-            self.send_header("Content-Disposition", f'inline; filename="{no}.mp4"')
+            self.send_header("Content-Disposition", f'attachment; filename="{no}.mp4"')
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             if self.command == "HEAD":

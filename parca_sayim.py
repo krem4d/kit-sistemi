@@ -95,8 +95,9 @@ MODUL_BAGLANTI_TOL = 0.001      # %0.1 tolerans
 # rastgele aralıklı gerçek vidalar ray desenine tesadüfen uyup yanlış ray sanılıyordu
 # (ör. gerçek 55cm ray'in 25cm bulunması). Ray'ler artık SADECE bu kendine özgü
 # hacim bandındaki deliklerden aranır — ahşap vidası/ayarlı ayak havuzuna DOKUNMAZ.
-RAY_DELIK_HACIM = 84.92    # hacim_bul_raporu.txt ölçümü (3 deliğin ortalaması)
-RAY_DELIK_TOL = 0.02       # %2 (tekil ölçüm, linco/pim gibi hassas delik tipi)
+# Güncel ölçüm (son hacim raporu): 84.9186 / 84.9185 / 84.9172 → ortalama 84.9181.
+RAY_DELIK_HACIM = 84.9181  # son hacim raporu ölçümü (3 deliğin ortalaması)
+RAY_DELIK_TOL = 0.01       # %1 (tekil ölçüm, linco/pim gibi hassas delik tipi)
 
 # ── Uzun linco pimi (iki parçadaki birbirine dayalı linco delikleri) ──────────
 # İki AYRI modülün birbirine dayanan linco gövde delikleri arasına normal linco

@@ -21,8 +21,9 @@ KULLANIM (GUI):
     - Her delik için Empty (küre):  "raydelik_<Parca>#<i>_<hacim>"
     - Konsolda: parça başına delik sayısı + HER deliğin hacmi.
 
-NOT: RAY_DELIK_HACIM = 84.92, RAY_DELIK_TOL = %2 (parca_sayim.py ile AYNI sabit,
-     buraya birebir kopyalanmıştır — parca_sayim.py'ye dokunulmadı).
+NOT: RAY_DELIK_HACIM = 84.9181, RAY_DELIK_TOL = %1 (parca_sayim.py ile AYNI sabit,
+     buraya birebir kopyalanmıştır — parca_sayim.py'ye dokunulmadı; son hacim
+     raporu ölçümü: 84.9186 / 84.9185 / 84.9172 → ortalama).
 """
 
 import bpy
@@ -30,8 +31,8 @@ import bmesh
 import mathutils
 
 # ── Ray deliği hacim bandı (parca_sayim.py ile AYNI) ─────────────────────────
-RAY_DELIK_HACIM = 84.92
-RAY_DELIK_TOL = 0.02
+RAY_DELIK_HACIM = 84.9181
+RAY_DELIK_TOL = 0.01
 VOL_LO = RAY_DELIK_HACIM * (1 - RAY_DELIK_TOL)
 VOL_HI = RAY_DELIK_HACIM * (1 + RAY_DELIK_TOL)
 
