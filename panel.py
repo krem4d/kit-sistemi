@@ -41,6 +41,7 @@ ISLENIYOR_ESIGI = 120  # bozuk json bu kadar sn'den tazeyse "yazım anı" say
 
 BASE = os.environ.get("ADAPTX_BASE") or os.path.dirname(os.path.abspath(__file__))
 FBX_DIR = os.path.join(BASE, "fbx")
+RENK_DIR = os.path.join(BASE, "renkler")  # fbx_indir.sh yazar; parca_sayim.py okur
 VIDEO_ENVANTER = os.path.join(BASE, "video_envanteri.json")  # fbx_indir.sh yazar
 JSON_DIR = os.path.join(BASE, "jsons")
 PDF_DIR = os.path.join(BASE, "pdf")
@@ -369,6 +370,28 @@ def siparis_okumasi():
             k["video"] = ({"ad": os.path.basename(v["yol"]), "boyut": v.get("boyut")}
                           if isinstance(v, dict) and v.get("yol") else None)
 
+        # 3c) renkler/ taraması: sipariş no → HAM renk json kaynak dosyası (fbx_indir.sh
+        # indirir, parca_sayim.py okuyup jsons/<no>.json'daki "renk" alanını üretir; panel
+        # burada yalnızca ham dosyayı indirilebilir kılmak için tarar, kendi PARSE etmez).
+        renk_dosyalari = {}
+        try:
+            for e in os.scandir(RENK_DIR):
+                if not (e.is_file() and e.name.lower().endswith(".json")):
+                    continue
+                m = FBX_NO_RX.search(e.name)
+                if not m:
+                    continue
+                st = e.stat()
+                no = m.group(1)
+                aday = {"ad": e.name, "zaman": int(st.st_mtime), "boyut": st.st_size}
+                onceki = renk_dosyalari.get(no)
+                if onceki is None or aday["zaman"] > onceki["zaman"]:
+                    renk_dosyalari[no] = aday
+        except OSError:
+            pass
+        for no, k in kayitlar.items():
+            k["renk_dosya"] = renk_dosyalari.get(no)
+
         # 4) Manifest sırası → özet PDF sayfa numarası (idx//14 + 1)
         siralama = _manifest_oku()
         idx_map = {no: i for i, no in enumerate(siralama)}
@@ -509,6 +532,7 @@ def durum_yaniti():
                 "not_metin": siparis_notu.get("metin") or "",
                 "not_zaman": siparis_notu.get("zaman"),
                 "fbx": k["fbx"], "video": k["video"],
+                "renk": veri.get("renk"), "renk_dosya": k["renk_dosya"],
             })
             sayac["toplam"] += 1
             sayac["pdf"] += 1 if k["pdf"] else 0
@@ -537,6 +561,7 @@ def siparis_yaniti(no, ham_goster=False):
         "ray_setleri": veri.get("ray_setleri") or {},
         "fbx": k["fbx"], "video": k["video"], "pdf": k["pdf"], "ozet_no": k["ozet_no"],
         "zaman": k["zaman"], "checklist": checklist, "tamam": tamam, "toplam": toplam,
+        "renk": veri.get("renk"), "renk_dosya": k["renk_dosya"],
     }
     if ham_goster:
         yanit["ham"] = {a: veri.get(a) for a in ("_ham", "_kulp", "_raylar", "_uzun_linco")}
@@ -799,6 +824,13 @@ class PanelIstek(BaseHTTPRequestHandler):
                         return self._json(400, {"hata": "geçersiz dosya adı"})
                     return self._dosya(os.path.join(FBX_DIR, ad), FBX_DIR,
                                        "application/octet-stream", ad, inline=False)
+                if yol.startswith("/renk/"):
+                    ad = yol[len("/renk/"):]
+                    if ("/" in ad or "\\" in ad or ad.startswith(".")
+                            or not ad.lower().endswith(".json")):
+                        return self._json(400, {"hata": "geçersiz dosya adı"})
+                    return self._dosya(os.path.join(RENK_DIR, ad), RENK_DIR,
+                                       "application/json", ad, inline=False)
                 return self._json(404, {"hata": "bulunamadı"})
 
             if self.command == "POST":

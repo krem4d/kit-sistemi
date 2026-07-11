@@ -74,6 +74,10 @@ docker compose up -d
 
 - Yeni sipariş: FBX dosyasını **`data/fbx/`** içine kopyalayın (dosya adında sipariş no
   geçmeli, örn. `9281.fbx` veya `9281-2.fbx`).
+- Renk (opsiyonel): aynı sipariş no'suyla eşleşen bir `<sipariş>.json`'u
+  **`data/renkler/`** içine koyarsanız (Mert'in `user_data.renk` formatı — bkz.
+  `parca_kurallari.md` "Renk" bölümü), Linco Gövde/Kapak ve Tıpa renkleri PDF'e işlenir.
+  Yoksa sayım aynen çalışır, renk alanı boş kalır.
 - En geç 5 dakika içinde servis işler; sonuç:
   - `data/pdf/siparişler pdf/<sipariş>.pdf` (sipariş başına)
   - `data/pdf/siparisler_ozet*.pdf` (özet — yeni sipariş sona eklenir)

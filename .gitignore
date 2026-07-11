@@ -3,6 +3,8 @@
 data/
 # sipariş modelleri (müşteri verisi, büyük)
 fbx/
+# sipariş renk verisi (müşteri verisi, Mert'in yüklediği <sipariş>.json'lar)
+renkler/
 # üretilen ara çıktılar
 jsons/
 # üretilen PDF'ler

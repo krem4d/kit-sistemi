@@ -60,6 +60,7 @@ def _base_dir():
 BASE = _base_dir()
 FBX_DIR = os.path.join(BASE, "fbx")
 OUT_DIR = os.path.join(BASE, "jsons")
+RENK_DIR = os.path.join(BASE, "renkler")  # Mert'in yüklediği <sipariş>.json renk verisi (girdi)
 # Bellek: daha önce işlenmiş siparişlerin İŞLENME sırası. JSON'u zaten olan sipariş
 # tekrar işlenmez (ağır Blender adımı atlanır); yeni siparişler bu listenin SONUNA
 # eklenir (pdf_uret.py özeti bu sıraya göre üretir → var olanın sonuna eklenmiş olur).
@@ -135,6 +136,20 @@ CIVI_ARALIK_MM = 150.0       # arkalık çivisi aralığı (orijinal 0.15 m kura
 # örtüşerek bitişir; ayrı modüllerin arkalıkları bunu sağlamaz.
 ARKALIK_ESLESME_TOL = 0.03   # %3 — aynı arkalığın iki yarısı aynı hacimde olmalı
 ARKALIK_TEMAS_TOL_MM = 2.0   # mm — temas/örtüşme için izin verilen sıfıra-yakın sapma
+
+# ── Renk (Mert'in ayrı yüklediği renkler/<sipariş>.json'undan) ───────────────
+# Eksikler.md §5'te ertelenen "renkli parçaların hangi renk olduğunu bulma" işi:
+# Mert artık FBX'e gömülü texture yerine parça başına user_data.renk kodu içeren
+# ayrı bir <sipariş>.json yüklüyor (bkz. "Sisteme renklerin entegre edilmesi.md").
+# Siparişin rengi, o json'daki parçalar arasında EN ÇOK GEÇEN renk kodudur; buna
+# göre görünür parçaların (Linco Gövde/Kapak, Tıpa) rengi eşlenir. Minifix/Linco
+# Dübel'in rengi görünmediği için eşlenmez.
+RENK_KOD_ADI = {"0": "Beyaz", "1": "Meşe", "2": "Gri"}
+PARCA_RENK_KURALI = {
+    "Beyaz": {"Linco Gövde": "Beyaz", "Linco Kapak": "Beyaz", "Tıpa": "Beyaz"},
+    "Meşe":  {"Linco Gövde": "Siyah", "Linco Kapak": "Siyah", "Tıpa": "Kahverengi"},
+    "Gri":   {"Linco Gövde": "Siyah", "Linco Kapak": "Siyah", "Tıpa": "Siyah"},
+}
 
 # ── Sabit varsayımlar (şimdilik) ─────────────────────────────────────────────
 L_BAGLANTI_ADET = 2          # her sipariş için 2 L bağlantı seti (set+vida+dübel dahil)
@@ -751,6 +766,62 @@ def order_from_name(fbx_path):
     return m.group(1) if m else "0000"
 
 
+def _renk_json_yolu(order):
+    """renkler/ içinde bu siparişe ait renk json'unu bul. Önce `<order>.json` tam
+    eşleşmesi denenir; yoksa klasördeki dosya adları order_from_name ile AYNI
+    regex kullanılarak taranır (Mert'in yüklediği ad `9307-2-mert c..json` gibi
+    ekstra metin içerebilir). Dosya/klasör yoksa None (henüz yüklenmemiş)."""
+    tam = os.path.join(RENK_DIR, f"{order}.json")
+    if os.path.exists(tam):
+        return tam
+    if not os.path.isdir(RENK_DIR):
+        return None
+    for ad in sorted(os.listdir(RENK_DIR)):
+        if not ad.lower().endswith(".json"):
+            continue
+        m = re.search(r'(\d{4,}(?:-\d+)?)', ad)
+        if m and m.group(1) == order:
+            return os.path.join(RENK_DIR, ad)
+    return None
+
+
+def siparis_rengi_belirle(order):
+    """renkler/<sipariş>.json'daki parça renklerinden (user_data.renk) siparişin
+    BASKIN rengini (en çok geçen kod) ve buna göre Linco Gövde/Linco Kapak/Tıpa
+    renklerini döndürür. Dosya yok/boş/tanınmayan kodsa None — PDF ve panel bunu
+    sessizce atlar (renk bilgisi henüz yüklenmemiş demektir)."""
+    yol = _renk_json_yolu(order)
+    if not yol:
+        return None
+    try:
+        with open(yol, encoding="utf-8") as f:
+            ham = json.load(f)
+    except Exception as e:
+        print(f"  [UYARI] renk json okunamadı ({yol}): {e}")
+        return None
+
+    kodlar = Counter()
+    for parca in ham.get("parcalar") or []:
+        kod = (parca.get("user_data") or {}).get("renk")
+        if kod is not None:
+            kodlar[str(kod)] += 1
+    if not kodlar:
+        return None
+
+    baskin_kod, _ = kodlar.most_common(1)[0]
+    ad = RENK_KOD_ADI.get(baskin_kod)
+    if not ad:
+        print(f"  [UYARI] bilinmeyen renk kodu '{baskin_kod}' ({yol})")
+        return None
+
+    return {
+        "siparis_rengi_kodu": baskin_kod,
+        "siparis_rengi": ad,
+        "kaynak_dosya": os.path.basename(yol),
+        "parca_renkleri": dict(PARCA_RENK_KURALI[ad]),
+    }
+
+
 def _load_manifest():
     try:
         with open(MANIFEST, encoding="utf-8") as f:
@@ -953,6 +1024,7 @@ def count_order(order):
         "adet": adet,
         "gram": gram,
         "ray_setleri": ray_setleri,    # boy bazında ray seti adedi (ör. {"55cm": 2})
+        "renk": siparis_rengi_belirle(order),  # None = renk json henüz yüklenmemiş
         "_ham": dict(counts),          # doğrulama için (linco==pim beklenir)
         "_kulp": kulp,
         "_raylar": ray_isimleri,       # tespit edilen ray boyları (doğrulama için)

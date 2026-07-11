@@ -665,7 +665,8 @@ function notImzaParcasi(no){
 }
 function siparisImza(o){
   return [o.durum, o.pdf?1:0, o.ozet_no??'', dictImza(o.adet), dictImza(o.gram), dictImza(o.ray_setleri), checklistImzaParcasi(o.no), notImzaParcasi(o.no),
-          (o.fbx||[]).map(f=>f.ad+':'+f.boyut).join(','), o.video ? o.video.ad+':'+o.video.boyut : ''].join('|');
+          (o.fbx||[]).map(f=>f.ad+':'+f.boyut).join(','), o.video ? o.video.ad+':'+o.video.boyut : '',
+          o.renk_dosya ? o.renk_dosya.ad+':'+o.renk_dosya.boyut : '', o.renk ? o.renk.siparis_rengi : ''].join('|');
 }
 function stripImza(o){
   const {tamam,toplam} = kartTamamToplam(o);
@@ -715,13 +716,16 @@ function kartBaslikHtml(o, tamam, toplam){
     ? '<a class="kart-link" href="/pdf/ozet/'+o.ozet_no+'" target="_blank" rel="noopener">Özet '+o.ozet_no+'</a>' : '';
   const fbxBtn = (o.fbx || []).map((f, i) =>
     '<a class="kart-link" href="/fbx/'+encodeURIComponent(f.ad)+'" download title="'+esc(f.ad)+' — '+mbStr(f.boyut)+'">FBX'+((o.fbx.length>1)?' '+(i+1):'')+'</a>').join('');
+  const renkBtn = o.renk_dosya
+    ? '<a class="kart-link" href="/renk/'+encodeURIComponent(o.renk_dosya.ad)+'" download title="'+esc(o.renk_dosya.ad)+' — '+mbStr(o.renk_dosya.boyut)+'">Renk'+(o.renk && o.renk.siparis_rengi ? ' ('+esc(o.renk.siparis_rengi)+')' : '')+'</a>'
+    : '';
   const animasyonBtn = o.video
     ? '<a class="rozet-animasyon rozet-var" href="/video/'+encodeURIComponent(o.no)+'" download="'+esc(o.no)+'.mp4" title="'+esc(o.video.ad)+' — '+mbStr(o.video.boyut)+'"><span class="dot" aria-hidden="true"></span>Animasyon</a>'
     : '<span class="rozet-animasyon rozet-yok" title="Drive klasöründe '+esc(o.no)+'.mp4 bulunamadı"><span class="dot" aria-hidden="true"></span>Animasyon</span>';
   const parcaBilgi = o.parca ? '<span class="kart-parca-sayisi muted">'+o.parca+' parça</span>' : '';
   return '<span class="kart-no">'+esc(o.no)+'</span>'+parcaBilgi
     + '<span class="badge badge-'+m.sinif+'"><span class="dot"></span>'+esc(m.etiket)+'</span>'
-    + '<span class="kart-baslik-sag">'+ilerlemeHtml(tamam,toplam)+pdfBtn+ozetBtn+fbxBtn+animasyonBtn+'</span>';
+    + '<span class="kart-baslik-sag">'+ilerlemeHtml(tamam,toplam)+pdfBtn+ozetBtn+fbxBtn+renkBtn+animasyonBtn+'</span>';
 }
 function notBolumHtml(no){
   const m = notMap[no] || {metin:'', zaman:null};

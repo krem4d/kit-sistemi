@@ -201,8 +201,23 @@ uygular. Kaynak türleri:
 - **Kaynak:** türetme (ayarlı ayaktan).
 - **Kural:** **her ayarlı ayak için 1 tıpa**.
 - **Adet:** `ayarlı ayak sayısı`.
-- Not: Renk ayrımı (Beyaz/Siyah/Kahverengi) ertelendi (Eksikler.md — Mert entegrasyonu);
-  şimdilik toplam tıpa adedi hesaplanır.
+- **Renk:** artık uygulanıyor — bkz. aşağıdaki "Renk (Linco/Linco Kapak/Tıpa)" bölümü.
+
+### Renk (Linco Gövde/Linco Kapak/Tıpa)
+- **Kaynak:** `renkler/<sipariş>.json` (Mert'in FBX'le birlikte yüklediği, parça başına
+  `user_data.renk` kodu içeren ayrı dosya — dosyadaki diğer alanlar kullanılmaz).
+- **Kod:** `"0"` = Beyaz, `"1"` = Meşe, `"2"` = Gri.
+- **Sipariş rengi:** siparişteki parçalar arasında **en çok geçen kod** (siparişin
+  tamamı için TEK renk; parça bazında değil).
+- **Kural (sipariş rengine göre parça rengi):**
+  | Sipariş rengi | Linco (Gövde/Kapak) | Tıpa |
+  |---|---|---|
+  | Beyaz | Beyaz | Beyaz |
+  | Meşe | Siyah | Kahverengi |
+  | Gri | Siyah | Siyah |
+- Minifix ve Linco Dübel görünür olmadığından renk etiketlenmez.
+- `renkler/<sipariş>.json` henüz yüklenmemişse (veya tanınmayan kod içeriyorsa) JSON'da
+  `"renk": null` kalır; PDF/panel bunu sessizce atlar (miktar hesabı etkilenmez).
 
 ### Kulp
 - **Kaynak:** delik çifti (`modulbaglanti` hacmi = 351.35, %5 tol).

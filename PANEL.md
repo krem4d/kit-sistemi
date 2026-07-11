@@ -98,9 +98,11 @@ kendiliğinden yenilenir).
 
 Kart başlığındaki linkler: **PDF** (sipariş PDF'i), **Özet N** (özet sayfası),
 **FBX** (kaynak modeli indirir; sipariş başına birden çok fbx varsa FBX 1/2…),
-**Video** (montaj videosunu tarayıcıda oynatır). Videosu olmayan siparişte
-sönük bir "Video yok" göstergesi durur; böylece Drive'a videosu yüklenmemiş
-siparişler panelden tek bakışta görülür.
+**Renk** (Mert'in yüklediği ham `renkler/<sipariş>.json`'u indirir; buton
+etiketinde hesaplanan sipariş rengi de görünür, ör. "Renk (Meşe)"; dosya henüz
+yüklenmemişse buton hiç gösterilmez), **Video** (montaj videosunu tarayıcıda
+oynatır). Videosu olmayan siparişte sönük bir "Video yok" göstergesi durur;
+böylece Drive'a videosu yüklenmemiş siparişler panelden tek bakışta görülür.
 
 Videolar **diske indirilmez**: `fbx_indir.sh` her dakikalık turunda Drive
 giriş klasöründeki `<sipariş_no>.mp4` dosyalarının yalnızca ENVANTERİNİ
@@ -151,8 +153,9 @@ başlar — kanıt kaybolmaz, `data/` klasörüne bakıp elle kurtarabilirsin.
 ## 8) Yol uyumu
 
 `ADAPTX_BASE` diğer servislerle aynı mantığı kullanır (SERVIS.md'ye bakınız):
-panel `ADAPTX_BASE=/opt/adaptx` altındaki `fbx/`, `jsons/`, `pdf/`, `videolar/`,
-`islem_gecmisi.json`'u okur. Farklı bir yola kurulursa `adaptx-panel.service`
-içindeki `ADAPTX_BASE`'i (ve `ReadWritePaths`'i) ona göre güncelle.
-`video_envanteri.json`'u yazan `fbx_indir.sh`'ın kurulu kopyası
-`/usr/local/bin/fbx_indir.sh`'tır (cron, her dakika); repodaki kopya referanstır.
+panel `ADAPTX_BASE=/opt/adaptx` altındaki `fbx/`, `renkler/`, `jsons/`, `pdf/`,
+`videolar/`, `islem_gecmisi.json`'u okur. Farklı bir yola kurulursa
+`adaptx-panel.service` içindeki `ADAPTX_BASE`'i (ve `ReadWritePaths`'i) ona göre
+güncelle. `renkler/`'i (ve `video_envanteri.json`'u) yazan `fbx_indir.sh`'ın
+kurulu kopyası `/usr/local/bin/fbx_indir.sh`'tır (cron, her dakika); repodaki
+kopya referanstır.

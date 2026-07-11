@@ -10,6 +10,7 @@ set -u
 DRIVE_IN_ID="1_pi5GtrrGXjABLOi9kRPlg3CD7_fY-51"
 DRIVE_OUT_ID="1DTt81x4rj7I6CbZ_qqjAz18B4jpHoJxW"
 FBX_HEDEF="/opt/adaptx/fbx"
+RENK_HEDEF="/opt/adaptx/renkler"
 VIDEO_ENVANTER="/opt/adaptx/video_envanteri.json"
 PDF_KAYNAK="/opt/adaptx/pdf"
 LOCK_FILE="/var/lock/adaptx_fbx_indir.lock"
@@ -21,7 +22,7 @@ if ! flock -n 9; then
     exit 0
 fi
 
-mkdir -p "$FBX_HEDEF" "$PDF_KAYNAK"
+mkdir -p "$FBX_HEDEF" "$RENK_HEDEF" "$PDF_KAYNAK"
 
 # Ortak rclone ayarları: sınırlı yeniden deneme, makul zaman aşımı.
 RCLONE_OPTS=(--low-level-retries 3 --retries 2 --timeout 3m --contimeout 30s)
@@ -70,6 +71,47 @@ while IFS= read -r UZAK_YOL; do
 done <<< "$LISTE"
 
 echo "$LOG — indirme turu bitti: $YENI yeni, $HATA hata."
+
+# --- 1a-2) Renk JSON'larını indir: aynı Drive klasöründeki <sipariş>.json'lar ---
+# Mert'in parça-başına renk bilgisi (user_data.renk) içeren dosyaları — FBX ile
+# aynı mantık: zaten yerelde varsa tekrar indirilmez, parca_sayim.py bunları
+# renkler/ altından okuyup siparişin baskın rengini + Linco/Tıpa renklerini türetir.
+RLISTE_ERR="$(mktemp)"
+RLISTE="$(rclone lsf gdrive: --drive-root-folder-id "$DRIVE_IN_ID" \
+    -R --files-only --max-depth 2 \
+    --include "*.json" --ignore-case \
+    "${RCLONE_OPTS[@]}" 2>"$RLISTE_ERR")"
+RLISTE_RC=$?
+if [ $RLISTE_RC -ne 0 ]; then
+    echo "$LOG — UYARI: renk json listesi alınamadı (rc=$RLISTE_RC): $(cat "$RLISTE_ERR")"
+else
+    RYENI=0
+    RHATA=0
+    while IFS= read -r UZAK_YOL; do
+        [ -z "$UZAK_YOL" ] && continue
+        DOSYA_ADI="$(basename "$UZAK_YOL")"
+        HEDEF="$RENK_HEDEF/$DOSYA_ADI"
+
+        if [ -e "$HEDEF" ]; then
+            continue
+        fi
+
+        GECICI="$HEDEF.indiriliyor.$$"
+        if rclone copyto "gdrive:$UZAK_YOL" "$GECICI" \
+            --drive-root-folder-id "$DRIVE_IN_ID" "${RCLONE_OPTS[@]}" --no-traverse 2>>/var/log/adaptx_fbx_indir.err; then
+            mv -f "$GECICI" "$HEDEF"
+            RYENI=$((RYENI+1))
+            echo "$LOG — renk json indirildi: $DOSYA_ADI"
+        else
+            RHATA=$((RHATA+1))
+            echo "$LOG — HATA: renk json indirilemedi: $UZAK_YOL"
+            rm -f "$GECICI"
+        fi
+    done <<< "$RLISTE"
+    echo "$LOG — renk json turu bitti: $RYENI yeni, $RHATA hata."
+fi
+rm -f "$RLISTE_ERR"
+find "$RENK_HEDEF" -maxdepth 1 -name "*.indiriliyor.*" -mmin +30 -delete 2>/dev/null
 
 # --- 1b) Montaj videosu ENVANTERİ: aynı Drive klasöründeki <no>.mp4'ler ---
 # İndirme YOK — yalnızca "hangi siparişin videosu var" listesi çıkarılır ve

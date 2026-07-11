@@ -15,11 +15,11 @@ Mertle konuşulması lazım neye göre eklenilmeli karar vermeliyiz
 
 Modüllerin tespit edilmesi lazım bunun için kapsamlı bir algoritma geliştirilmeli 
 
-**Renkli parçaların hangi renk olduğunu bulma 
+**Renkli parçaların hangi renk olduğunu bulma — ✅ ÇÖZÜLDÜ
 
-Bunun için mertle konuşulması ve onun tarafından basit bir entegrasyon yapılması gerek  
-
-Mertle konuşuldu mertin fbxlerin içine textureların bilgilerini gömmesi gerekiyor 
+FBX'e gömülü texture yerine Mert artık ayrı bir renkler/<sipariş>.json yüklüyor (parça
+başına user_data.renk kodu). Kural ve uygulama: "Sisteme renklerin entegre edilmesi.md",
+parca_kurallari.md ("Renk" bölümü), parca_sayim.py::siparis_rengi_belirle.
 
 **Kulp
 
@@ -36,4 +36,4 @@ Mert bu konuda uyardı bazı modellerde fbx dosyasnha kulp dummysi konulmasa bil
 
 4-L modül uzun linco pimi
 
-5-Renkli Parçaların hangi renk olduğunu bulma (Şuan Yapılamaz mertten beklenenler var)
+5-Renkli Parçaların hangi renk olduğunu bulma — ✅ ÇÖZÜLDÜ

@@ -8,7 +8,7 @@ INTERVAL="${POLL_INTERVAL:-300}"          # varsayılan 5 dakika
 BASE="${ADAPTX_BASE:-/data}"
 
 # Veri klasörleri yoksa oluştur (ilk kurulum / boş bind-mount)
-mkdir -p "${BASE}/fbx" "${BASE}/jsons" "${BASE}/pdf"
+mkdir -p "${BASE}/fbx" "${BASE}/jsons" "${BASE}/pdf" "${BASE}/renkler"
 
 echo "[adaptx] servis başladı — her ${INTERVAL}s kontrol. Veri klasörü: ${BASE}"
 echo "[adaptx] FBX'leri ${BASE}/fbx içine bırakın; PDF'ler ${BASE}/pdf altına düşer."

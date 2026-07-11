@@ -40,6 +40,7 @@ BLOCKS_PER_PAGE = 2         # sayfada alt alta blok → 14 sipariş/sayfa
 
 # (görünen etiket, JSON adet anahtarı)
 ROWS = [
+    ("Sipariş Rengi", "__renk__"),
     ("Frenli Menteşe", "Frenli Menteşe"),
     ("Frensiz Menteşe", "Frensiz Menteşe"),
     ("Menteşe Tabanı", "Menteşe Tabanı"),
@@ -92,6 +93,9 @@ def cell_value(d, key):
     # Ray Seti satırları: key = ("ray", "55cm") → o boydaki set adedi
     if isinstance(key, tuple) and key[0] == "ray":
         return fmt((d.get("ray_setleri") or {}).get(key[1], 0))
+    # Sipariş Rengi satırı: renk json henüz yüklenmemişse boş (fmt(None)'la aynı davranış)
+    if key == "__renk__":
+        return (d.get("renk") or {}).get("siparis_rengi") or ""
     s = fmt(d["adet"].get(key))
     if s == "":          # adet 0/None → hücre tamamen boş ("/ gram" da yazma)
         return ""
@@ -99,6 +103,10 @@ def cell_value(d, key):
         g = d.get("gram", {}).get(GRAM_KEY[key])
         if g is not None:
             s = f"{s} / {fmt(g)}"
+    # Renkli parçalar (Linco Gövde/Kapak, Tıpa): adet hücresine parantez içi renk ekle.
+    renk = (d.get("renk") or {}).get("parca_renkleri", {}).get(key)
+    if renk:
+        s = f"{s} ({renk})"
     return s
 
 

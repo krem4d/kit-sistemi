@@ -64,6 +64,7 @@ small standalone logic tests are the normal pre-flight checks.
 | Path | Role |
 |------|------|
 | `fbx/` | **Input.** One `.fbx` per order (order no. parsed from filename). |
+| `renkler/` | **Input (optional).** Mert's per-order color JSON (`<order>.json` or similar, order no. parsed the same way); read by `parca_sayim.py` to derive the order's dominant color and Linco/Tıpa colors — see §4g. Downloaded by `fbx_indir.sh` alongside `fbx/`. |
 | `jsons/` | **Intermediate.** One `<order>.json` per processed order (also the "already done" record). |
 | `pdf/` | **Output.** `pdf/siparişler pdf/<order>.pdf` (per order) + `pdf/siparisler_ozet*.pdf` (summary, 14 orders/page). |
 | `islem_gecmisi.json` | **Memory/manifest.** Processing order of orders (see §5). |
@@ -121,7 +122,8 @@ Each cavity's volume is matched to a category (`match_category`) within `TOLERAN
   **Linco Dübel** = linco − 2×(uzun linco pimi).
 - **Uzun Linco Pimi** (long L-module pin) — see §4f.
 - **Ayarlı Ayak** = parts with **exactly 4** wood-screw holes (after rays removed).
-  **Allen** = 1 if ayak≥1 else 0. **Tıpa** = ayak.
+  **Allen** = 1 if ayak≥1 else 0. **Tıpa** = ayak. **Color** of Linco Gövde/Kapak/Tıpa —
+  see §4g.
 - **Ray Seti** = wood-screw holes forming a collinear rail spacing pattern
   (`detect_rays`, `RAY_GAPS`); 2 same-length rails = 1 set.
 - **Ağaç Vidası** = (non-ray wood-screw holes) + 4 × L bağlantı seti.
@@ -149,6 +151,29 @@ axis rays from the cavity center at the panel; the non-hitting direction is the 
 *unsigned* direction) produced false positives — an irrelevant bridge between two real
 pairs, and same-direction pairs. If false positives persist, tighten `ALIGN_MIN`
 (→0.95) or `AXIS_MIN` (→0.995).
+
+### 4g. Renk (color of Linco Gövde/Kapak/Tıpa) — `siparis_rengi_belirle`
+Resolves the deferred item in `Eksikler.md` §5 ("renkli parçaların hangi renk olduğunu
+bulma"). Instead of texture data embedded in the FBX (the originally planned approach),
+Mert uploads a separate `renkler/<order>.json` alongside the FBX, listing every part with
+a `user_data.renk` code (`"0"`=Beyaz, `"1"`=Meşe, `"2"`=Gri — `RENK_KOD_ADI`). Only that
+field is used; `modul_yeri`/`modul_tipi`/`kenar_bandi`/etc. are ignored.
+
+- **Order color** = the code that appears most often across the order's parts
+  (`Counter.most_common(1)`), *not* a per-part attribute — one color per order.
+- **Part color mapping** (`PARCA_RENK_KURALI`), applied to **Linco Gövde**, **Linco
+  Kapak**, and **Tıpa** only (Minifix/Linco Dübel aren't user-visible, so untagged):
+  | Order color | Linco Gövde/Kapak | Tıpa |
+  |---|---|---|
+  | Beyaz | Beyaz | Beyaz |
+  | Meşe | Siyah | Kahverengi |
+  | Gri | Siyah | Siyah |
+- Written to the order JSON as top-level `"renk"`: `null` if `renkler/<order>.json`
+  doesn't exist yet (color not uploaded) or has no recognizable `renk` codes; otherwise
+  `{"siparis_rengi_kodu", "siparis_rengi", "kaynak_dosya", "parca_renkleri"}`.
+- `pdf_uret.py` renders a "Sipariş Rengi" row and appends `(Renk)` to the Linco/Tıpa
+  quantity cells; `panel.py` exposes `renk` + a `renk_dosya` (raw file) download at
+  `/renk/<ad>`, mirroring the existing `/fbx/<ad>` button.
 
 ---
 
@@ -203,9 +228,9 @@ Data layout on the host mount: `data/fbx` (input), `data/jsons` + `data/islem_ge
   If the project moves, update `PROJE_DIZINI`.
 - **Don't edit `delikbulma.py`** expecting it to affect the pipeline — its helpers were
   copied into `parca_sayim.py`. Keep the copies in sync manually if you change shared logic.
-- **`.fbx` and `.blend` are git-ignored-ish / large** — `.claudeignore` excludes the big
-  blend files and stale reports. This is **not a git repo** (no VCS); don't assume
-  `git` commands work.
+- **`.fbx` and `.blend` are large** — `.claudeignore` excludes the big blend files and
+  stale reports; `.gitignore` excludes `fbx/`, `renkler/`, `jsons/`, `pdf/` (customer
+  data/generated output never committed).
 - **LibreOffice locks:** if a summary PDF is open (`.~lock.*` present), regeneration may
   fail to overwrite it. Close the viewer before running the pipeline.
 - **Performance:** EXACT boolean per part costs seconds; large orders take a while. The
@@ -243,10 +268,9 @@ runs it in the GUI → analyze the report → then build/adjust the pipeline rul
 - **L Bağlantı Seti / Vidası / Dübeli** — currently a hard-coded 2; real detection needs
   module identification and a decision (with "Mert").
 - **Kulp** — some models have handles without a kulp dummy; detection will change.
-- **Color of colored parts** — needs Mert to embed texture info in the FBX.
 - **Ray sets** — partially done; Mert to relate rail lengths to screw spacings.
-- **Renk/kontrol flags** (white/grey linco, tıpa colors, EVET/HAYIR checklist items) —
-  deferred.
+- ~~**Color of colored parts**~~ — **done**, see §4g (`renkler/<order>.json` +
+  `siparis_rengi_belirle`), superseding the originally-planned embedded-texture approach.
 
 When picking up deferred work, read `Eksikler.md` and `parca_kurallari.md` together, and
 prefer the diagnostic-first workflow in §7 before hardcoding a new rule.

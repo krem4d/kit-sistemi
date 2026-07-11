@@ -1,0 +1,38 @@
+{
+  "siparis_no": "9307-2-mert c.",
+  "parcalar": [
+    {
+      "parca_adi": "Tavan",
+      "user_data": {
+        "siparis_no": "9307-2-mert c.",
+        "modul_yeri": "ALT",
+        "modul_tipi": "CH-U-1",
+        "parca_adi": "Tavan",
+        "kenar_bandi": "0100",
+        "renk": "0"
+      }
+    },
+    {
+      "parca_adi": "Sağ Yan Duvar",
+      "user_data": {
+        "siparis_no": "9307-2-mert c.",
+        "modul_yeri": "ALT",
+        "modul_tipi": "CH-U-1",
+        "parca_adi": "Sağ Yan Duvar",
+        "kenar_bandi": "1110",
+        "renk": "0"
+      }
+    },
+    {
+      "parca_adi": "Sol Yan Duvar",
+      "user_data": {
+        "siparis_no": "9307-2-mert c.",
+        "modul_yeri": "ALT",
+        "modul_tipi": "CH-U-1",
+        "parca_adi": "Sol Yan Duvar",
+        "kenar_bandi": "1110",
+        "renk": "0"
+      }
+    }
+  ]
+}
