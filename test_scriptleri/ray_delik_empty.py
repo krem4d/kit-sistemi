@@ -21,20 +21,25 @@ KULLANIM (GUI):
     - Her delik için Empty (küre):  "raydelik_<Parca>#<i>_<hacim>"
     - Konsolda: parça başına delik sayısı + HER deliğin hacmi.
 
-NOT: RAY_DELIK_HACIM = 84.9181, RAY_DELIK_TOL = %1 (parca_sayim.py ile AYNI sabit,
-     buraya birebir kopyalanmıştır — parca_sayim.py'ye dokunulmadı; son hacim
-     raporu ölçümü: 84.9186 / 84.9185 / 84.9172 → ortalama).
+NOT: RAY_DELIK_HACIMLERI = [84.9181, 80.8258], RAY_DELIK_TOL = %1 (parca_sayim.py
+     ile AYNI sabit, buraya birebir kopyalanmıştır). Modellerde İKİ farklı ray
+     deliği geometrisi var: normal 84.92 (16 parça), 9363'te 80.83 (2 parça).
+     Bkz. parca_sayim.py:102 ve test_scriptleri/ray_hacim_tarama.py.
 """
 
 import bpy
 import bmesh
 import mathutils
 
-# ── Ray deliği hacim bandı (parca_sayim.py ile AYNI) ─────────────────────────
-RAY_DELIK_HACIM = 84.9181
+# ── Ray deliği hacim bandları (parca_sayim.py ile AYNI) ──────────────────────
+RAY_DELIK_HACIMLERI = [84.9181, 80.8258]
 RAY_DELIK_TOL = 0.01
-VOL_LO = RAY_DELIK_HACIM * (1 - RAY_DELIK_TOL)
-VOL_HI = RAY_DELIK_HACIM * (1 + RAY_DELIK_TOL)
+BANDLAR = [(h * (1 - RAY_DELIK_TOL), h * (1 + RAY_DELIK_TOL))
+           for h in RAY_DELIK_HACIMLERI]
+
+
+def ray_deligi_mi(v):
+    return any(lo <= v <= hi for lo, hi in BANDLAR)
 
 EMPTY_BOYUT = 0.012        # Empty görünüm boyutu (metre; sahne 1 birim = 1000 mm)
 
@@ -136,7 +141,8 @@ def main():
         return
 
     print(f"\n=== ray_delik_empty: {len(secili)} seçili parça taranıyor ===")
-    print(f"    ray deliği bandı: [{VOL_LO:.2f}, {VOL_HI:.2f}]  (RAY_DELIK_HACIM={RAY_DELIK_HACIM}, tol=%{RAY_DELIK_TOL*100:.0f})\n")
+    bandlar_str = "  ".join(f"[{lo:.2f}, {hi:.2f}]" for lo, hi in BANDLAR)
+    print(f"    ray deliği bandları: {bandlar_str}  (hacimler={RAY_DELIK_HACIMLERI}, tol=%{RAY_DELIK_TOL*100:.0f})\n")
 
     toplam_ray_delik = 0
     for o in secili:
@@ -150,7 +156,7 @@ def main():
         idx = 0
         for h in holes:
             v = h["volume"]
-            if VOL_LO <= v <= VOL_HI:
+            if ray_deligi_mi(v):
                 c = world_center(h["object"])
                 add_empty(f"raydelik_{_safe(o.name)}#{idx}_{v:.2f}", c)
                 idx += 1

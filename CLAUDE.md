@@ -67,9 +67,24 @@ for its checklist model, theming, and Drive-video-streaming details.
 
 - `delikbulma.py` is reference-only; its helpers were copied into `parca_sayim.py` and must be kept
   in sync manually — editing `delikbulma.py` has no effect on the pipeline.
-- `parca_sayim.py` hard-codes `PROJE_DIZINI` first (Blender's `__file__` is unreliable in its text
-  editor); update it if the project moves.
+- All scripts resolve their base directory dynamically (`ADAPTX_BASE` env var → `__file__`'s
+  directory → open `.blend`'s directory → cwd), no hard-coded path; the whole project can be
+  copied to a different location without edits.
 - `pdf_uret.fmt()` renders `0`/`None` as an empty cell by design — don't reintroduce `"0"`/`"—"`.
-- Diagnostic scripts (`hacim_bul.py`, `kalinlik_bul.py`, `kulp_mesafe_bul.py`, `linco_mesafe_bul.py`,
-  `linco_uzun_pim_teshis.py`) are interactive-only (run inside Blender's GUI text editor), not part
-  of the automated pipeline.
+- Diagnostic scripts all live in `test_scriptleri/` (moved out of the project root 2026-07-29).
+  They are interactive-only (run inside Blender's GUI) and not part of the automated pipeline.
+  **Never paste them into Blender's text editor** — that freezes a stale copy inside the `.blend`
+  and later edits to the `.py` silently stop taking effect (this is exactly what happened to the
+  report-writing fix). Run them via `test_scriptleri/BLENDER_CALISTIR.py`, which is opened from
+  disk (Text Editor > Open) and `exec`s the chosen tool with a real `__file__`.
+  Reports always land in `test_scriptleri/ciktilar/`; the resolved output path is printed on every
+  run. `test_scriptleri/olcumler/` holds the archived measurements that certain constants in
+  `parca_sayim.py` cite as evidence — those are never overwritten by a run.
+- **Exception to the "no hard-coded path" rule:** the 7 measurement scripts in `test_scriptleri/`
+  each carry a `SABIT_CIKTI_DIZINI` constant near the top. When a script is pasted into the text
+  editor of an *unsaved* blend, Blender sets `__file__` to `/Text` and `bpy.data.filepath` to `""`,
+  so no dynamic resolution is possible at all — and testing without saving is the normal workflow
+  here. Dynamic resolution still runs first (env var → `__file__` → blend dir), so a moved project
+  keeps working when launched from disk; the constant only catches the unresolvable case. Update
+  those 7 lines if the project moves. The pipeline scripts stay fully portable — do not add
+  hard-coded paths to `parca_sayim.py`, `pdf_uret.py`, or `panel.py`, which must run in Docker.

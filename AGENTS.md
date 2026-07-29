@@ -209,7 +209,7 @@ The pipeline can run headless as a container service that polls `fbx/` every
   `docker/yeni_var_mi.py` reports an FBX without a matching JSON.
 - **`docker-compose.yml`** — bind-mounts host `./data` → container `/data`.
 - **`ADAPTX_BASE`** env var (default `/data`) is the data root; both `parca_sayim.py`
-  and `pdf_uret.py` honor it (falling back to `PROJE_DIZINI`/`__file__` off-container),
+  and `pdf_uret.py` honor it (falling back to `__file__`'s directory off-container),
   so paths are static and portable across machines.
 - Full Proxmox CT / Docker instructions: **`DOCKER.md`**.
 
@@ -223,9 +223,11 @@ Data layout on the host mount: `data/fbx` (input), `data/jsons` + `data/islem_ge
   existing terse, section-headed comment style (`# ── … ──`).
 - **Zero = blank:** `pdf_uret.fmt()` renders `0`/`None` as an **empty cell** (user
   request). Don't reintroduce `"0"` or `"—"` for zero quantities.
-- **Path resolution:** `parca_sayim.py` hard-codes `PROJE_DIZINI` first (Blender's
-  `__file__` can be unreliable in the text editor), then falls back to `__file__`/cwd.
-  If the project moves, update `PROJE_DIZINI`.
+- **Path resolution:** all scripts (pipeline + diagnostic tools) resolve their base
+  directory dynamically — `ADAPTX_BASE` env var (pipeline only) → `__file__`'s directory
+  (validated with `os.path.isdir`, so a stale/virtual path from Blender's text editor is
+  skipped) → open `.blend` file's directory → `cwd`. No hard-coded absolute path; the
+  project can be copied/moved to any directory without edits.
 - **Don't edit `delikbulma.py`** expecting it to affect the pipeline — its helpers were
   copied into `parca_sayim.py`. Keep the copies in sync manually if you change shared logic.
 - **`.fbx` and `.blend` are large** — `.claudeignore` excludes the big blend files and

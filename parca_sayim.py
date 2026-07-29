@@ -35,25 +35,26 @@ import itertools
 from collections import Counter
 
 # ── Yol çözümü (proje dizini) ────────────────────────────────────────────────
-PROJE_DIZINI = "/home/rocket/Belgeler/adaptx-2/otonom_kit"
-
-
 def _base_dir():
     # 1) ADAPTX_BASE ortam değişkeni (Docker/servis): veri klasörü (fbx/jsons/pdf).
     #    Böylece dosya yolları statiktir ve her makineye/CT'ye uyar.
     env = os.environ.get("ADAPTX_BASE")
     if env and os.path.isdir(env):
         return env
-    # Blender Text editöründe __file__ = ".../x.blend/Text" olabilir (dizin DEĞİL),
-    # bu yüzden önce sabit proje dizinini dene (hacim_bul.py ile aynı sıra).
-    if os.path.isdir(PROJE_DIZINI):
-        return PROJE_DIZINI
+    # 2) __file__ (script diskten çalıştırıldığında). Blender Text editöründe
+    #    __file__ ".../x.blend/Text" gibi gerçek olmayan bir yol olabilir; isdir
+    #    kontrolü bunu otomatik eler.
     try:
         d = os.path.dirname(os.path.abspath(__file__))
         if os.path.isdir(d):
             return d
     except NameError:
         pass
+    # 3) Açık .blend dosyasının klasörü (Text editöründe __file__ yoksa).
+    if bpy.data.filepath:
+        d = os.path.dirname(bpy.data.filepath)
+        if os.path.isdir(d):
+            return d
     return os.getcwd()
 
 
@@ -89,7 +90,7 @@ MODUL_BAGLANTI_MESAFE = 0.018   # m — modül bağlantı deliği çifti arası 
 MODUL_BAGLANTI_TOL = 0.001      # %0.1 tolerans
 
 # ── Ray deliği hacmi (ahşap vidasından FARKLI, kendine özgü delik) ───────────
-# Keşif (hacim_bul_raporu.txt, Object_23): ray'e ait delikler CATEGORIES'teki
+# Keşif (test_scriptleri/olcumler/hacim_bul_raporu.txt, Object_23): ray'e ait delikler CATEGORIES'teki
 # hiçbir hacimle eşleşmiyor ([BİLİNMİYOR]) — 3 delik: 84.9189 / 84.9188 / 84.9175.
 # Bu, ahsapcivisi (14.57) ile AYNI delik DEĞİL, kendine özgü bir hacim. Eskiden
 # detect_rays() ahsapcivisi (gerçek ağaç vidası) havuzunda arıyordu; bu yüzden
@@ -97,7 +98,20 @@ MODUL_BAGLANTI_TOL = 0.001      # %0.1 tolerans
 # (ör. gerçek 55cm ray'in 25cm bulunması). Ray'ler artık SADECE bu kendine özgü
 # hacim bandındaki deliklerden aranır — ahşap vidası/ayarlı ayak havuzuna DOKUNMAZ.
 # Güncel ölçüm (son hacim raporu): 84.9186 / 84.9185 / 84.9172 → ortalama 84.9181.
-RAY_DELIK_HACIM = 84.9181  # son hacim raporu ölçümü (3 deliğin ortalaması)
+#
+# İKİ AYRI HACİM VAR (2026-07-29, test_scriptleri/ray_hacim_tarama.py ile 26 FBX tarandı):
+# 26 FBX'te çekmece yan duvarı imzasına (tam 2 linco + 2-3 eşit hacimli delik) uyan
+# 18 parça bulundu. Bunlardan 16'sı 84.9174–84.9198 (yayılım 0.0024), 2'si (9363'ün
+# Object_4/Object_5) tam olarak 80.8258 (yayılım 0.0000). Küme içi yayılım pratikte
+# sıfır olduğu için bu ÖLÇÜM GÜRÜLTÜSÜ DEĞİL — modellerde iki farklı delik geometrisi
+# var (9363'te linco dübel deliği de 859.76 vs 937.10, yani parçanın tamamı farklı).
+# Doğru çözüm Mert'in 9363'ü standart geometriyle yeniden üretmesi; ancak eski
+# siparişler yeniden işlenebilsin diye her iki bilinen hacim de tanınır.
+# Doğrulama: 80.83 tanınınca 9363'ün delik aralıkları 148.0/222.0 mm ölçülüyor,
+# 55cm imzası (149/222) ile sapma 1.0/0.0 mm → referans BoM'daki "1x55cm" ile birebir.
+# Bandlar: [80.017, 81.634] ve [84.072, 85.764] — birbirleriyle de, CATEGORIES'teki
+# hiçbir hacimle de (en yakını rafpimi 234) kesişmiyor.
+RAY_DELIK_HACIMLERI = [84.9181, 80.8258]  # bilinen ray deliği hacimleri (mm³)
 RAY_DELIK_TOL = 0.01       # %1 (tekil ölçüm, linco/pim gibi hassas delik tipi)
 
 # ── Uzun linco pimi (iki parçadaki birbirine dayalı linco delikleri) ──────────
@@ -161,10 +175,10 @@ FLANS_KENAR_TOL = 0.02       # kenar uzunlukları %2 toleransla eşit
 FLANS_ACI_LO = 59.0          # eşkenar üçgen açı alt sınırı (derece)
 FLANS_ACI_HI = 61.0          # eşkenar üçgen açı üst sınırı (derece)
 
-# ── Ray seti (RAY_DELIK_HACIM bandındaki deliklerin ray deseninden tespiti) ──
+# ── Ray seti (RAY_DELIK_HACIMLERI bandındaki deliklerin ray deseninden tespiti) ──
 # Kalibrasyon: kulp deliği modelde 0.192 birim ↔ gerçek 192 mm → 1 birim = 1000 mm.
-# Ray delikleri ahşap vidasıyla AYNI delik DEĞİL (bkz. RAY_DELIK_HACIM); parçadaki
-# RAY_DELIK_HACIM bandına giren delikler arasından doğrusal + ardışık aralıkları bir
+# Ray delikleri ahşap vidasıyla AYNI delik DEĞİL (bkz. RAY_DELIK_HACIMLERI); parçadaki
+# RAY_DELIK_HACIMLERI bandına giren delikler arasından doğrusal + ardışık aralıkları bir
 # ray boyunun imzasına (aşağıdaki RAY_GAPS) uyanlar = 1 ray. İmzalar, kullanıcının
 # referans-noktasına göre ölçtüğü delik KONUMLARINDAN (RAY_HOLE_POSITIONS) türetilir.
 RAY_SCALE_MM = 1000.0        # model birimi → mm çarpanı (kulp 0.192 ↔ 192 mm)
@@ -191,7 +205,7 @@ RAY_GAPS = {name: [round(pos[i + 1] - pos[i], 1) for i in range(len(pos) - 1)]
             for name, pos in RAY_HOLE_POSITIONS.items()}
 
 # ── Ayarlı ayak (4 ahşap çivisi = sabit dikdörtgen) ──────────────────────────
-# Ölçüm (iki_obje_mesafe.py, Object_55): ayağın 4 vida deliği, kenarları ~32 ve ~40 mm,
+# Ölçüm (test_scriptleri/olcumler/iki_obje_mesafe_raporu.txt, Object_55): ayağın 4 vida deliği, kenarları ~32 ve ~40 mm,
 # köşegeni ~51.22 mm olan bir DİKDÖRTGEN oluşturur (4 delik hep aynı mesafelerde).
 # Bir parçadaki ağaç vidası delikleri arasından bu dikdörtgeni oluşturan 4'lü = 1 ayak.
 # Eski kural ("parçada TAM 4 vida → 1 ayak") panele DAĞILMIŞ 4 yapısal vidayı da ayak
@@ -305,10 +319,15 @@ def match_category(vol):
 
 
 def is_ray_hole(vol):
-    """Delik hacmi RAY_DELIK_HACIM bandında mı? (ray'e özgü delik — ahsapcivisi DEĞİL)"""
-    lo = RAY_DELIK_HACIM * (1 - RAY_DELIK_TOL)
-    hi = RAY_DELIK_HACIM * (1 + RAY_DELIK_TOL)
-    return lo <= vol <= hi
+    """Delik hacmi bilinen ray deliği hacimlerinden birinin bandında mı?
+
+    Ray deliği ahsapcivisi ile AYNI delik DEĞİL (bkz. RAY_DELIK_HACIMLERI).
+    Modellerde iki farklı geometri var, bu yüzden tek değer değil liste kontrol edilir.
+    """
+    for hacim in RAY_DELIK_HACIMLERI:
+        if hacim * (1 - RAY_DELIK_TOL) <= vol <= hacim * (1 + RAY_DELIK_TOL):
+            return True
+    return False
 
 
 def world_center(obj):
@@ -496,7 +515,7 @@ def _ray_signature_match(gaps_mm):
 
 
 def detect_rays(centers):
-    """Parçadaki ray-deliği (RAY_DELIK_HACIM) merkezlerinden ray desenlerini ayır.
+    """Parçadaki ray-deliği (RAY_DELIK_HACIMLERI) merkezlerinden ray desenlerini ayır.
 
     Model: Bir ray'in delikleri, rayla aynı doğrultuda DOĞRUSAL dizilir; ardışık
     aralıkları o boya özgü unique imzayı (RAY_GAPS) verir. 3-delikli boylar (55–35cm)
@@ -504,7 +523,7 @@ def detect_rays(centers):
     aranır. Her eşleşme = 1 çekmece rayı. Her delik en fazla bir ray'de kullanılır
     (greedy). Returns (ray_isimleri:list, kalan_merkezler:list).
 
-    Not: Bu havuz ahsapcivisi/ayarlı ayak havuzuyla KESİŞMEZ (bkz. RAY_DELIK_HACIM),
+    Not: Bu havuz ahsapcivisi/ayarlı ayak havuzuyla KESİŞMEZ (bkz. RAY_DELIK_HACIMLERI),
     dolayısıyla ray tespiti ağaç vidası/ayak sayımını hiç etkilemez."""
     n = len(centers)
     used = [False] * n
@@ -925,7 +944,7 @@ def count_order(order):
                 if cat == "menteseTabani":
                     part_mentese += 1
             elif is_ray_hole(v):
-                # ray'e özgü delik (ahsapcivisi DEĞİL, bkz. RAY_DELIK_HACIM) — ray
+                # ray'e özgü delik (ahsapcivisi DEĞİL, bkz. RAY_DELIK_HACIMLERI) — ray
                 # deseni bu havuzda aranır, ahşap vidası/ayarlı ayak havuzuna girmez.
                 part_ray_centers.append(world_center(obj_part))
             bpy.data.objects.remove(obj_part, do_unlink=True)
@@ -941,7 +960,7 @@ def count_order(order):
         ayak += ayak_bu_parca
 
         # Ray desenleri artık KENDİNE ÖZGÜ delik havuzunda (part_ray_centers,
-        # RAY_DELIK_HACIM) aranır — ahsapcivisi havuzuyla hiç KESİŞMEZ. Böylece
+        # RAY_DELIK_HACIMLERI) aranır — ahsapcivisi havuzuyla hiç KESİŞMEZ. Böylece
         # rastgele aralıklı gerçek ağaç vidaları artık ray sanılıp çalınamaz;
         # ayarlı ayak/ağaç vidası sayımı ray tespitinden tamamen bağımsızdır.
         part_rays, _ray_disi = detect_rays(part_ray_centers)
@@ -969,7 +988,7 @@ def count_order(order):
     frensiz = mentese_tabani - frenli
     raf_pimi = counts["rafpimi"] // 3     # her raf pimi = 3 delik
     l_baglanti = L_BAGLANTI_ADET
-    # Ray'lerde kullanılan delik sayısı (RAY_DELIK_HACIM havuzundan, ahsapcivisi
+    # Ray'lerde kullanılan delik sayısı (RAY_DELIK_HACIMLERI havuzundan, ahsapcivisi
     # havuzuna hiç girmedi — ama ray varsa o rayların delikleri de birer vidayla
     # kapatıldığından, genel ağaç vidası adedinden düşülür).
     ray_delik_toplam = sum(len(RAY_HOLE_POSITIONS[name]) for name in ray_isimleri)

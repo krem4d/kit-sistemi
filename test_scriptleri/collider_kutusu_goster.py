@@ -157,20 +157,105 @@ def run():
         _write_report(lines)
 
 
-# Rapor bu proje dizinine yazılır (diğer diagnostic araçlarla aynı konvansiyon).
-PROJE_DIZINI = "/home/rocket/Belgeler/adaptx-2/otonom_kit"
+# Rapor scriptin bulunduğu dizine yazılır (diğer diagnostic araçlarla aynı
+# konvansiyon). Öncelik: scriptin klasörü -> blend klasörü -> cwd.
+# ═══════════════════════════════════════════════════════════════════════════
+# SABİT ÇIKTI DİZİNİ — raporlar buraya düşer
+# ═══════════════════════════════════════════════════════════════════════════
+# Bu script Blender'ın Text Editor'üne YAPIŞTIRILIP kaydedilmemiş bir blend'de
+# çalıştırıldığında Blender __file__'ı "/Text" yapar ve bpy.data.filepath boş
+# olur — yani scriptin kendi yerini bulmasının HİÇBİR yolu kalmaz. Kaydetmeden
+# test etmek normal bir çalışma biçimi olduğu için, yol burada SABİT yazılıdır.
+#
+# Projeyi başka bir yere taşırsan SADECE bu satırı güncelle.
+# (Boru hattı scriptleri — parca_sayim.py, pdf_uret.py, panel.py — hâlâ tamamen
+#  taşınabilir; sabit yol yalnızca bu teşhis araçlarında var.)
+SABIT_CIKTI_DIZINI = "/home/rocket/Jupiter/Projects/otonom_kit/test_scriptleri/ciktilar"
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _proje_dizini_mi(d):
+    """d gercekten test_scriptleri klasoru mu? Isaret dosyasi: BLENDER_CALISTIR.py.
+
+    Sadece os.path.isdir() BAKMAK YETMEZ: script blend'e yapistirilmissa Blender
+    __file__'i "/Text" yapar, dirname "/" olur ve "/" bir dizindir -> kod kok
+    dizine yazmaya calisir (PermissionError: '/ciktilar'). Isaret dosyasi bu
+    sahte yollari eler.
+    """
+    try:
+        return bool(d) and os.path.isfile(os.path.join(d, "BLENDER_CALISTIR.py"))
+    except OSError:
+        return False
+
+
+def _yazilabilir(p):
+    """p'yi olustur ve gercekten yazilabildigini test et; olmazsa None."""
+    try:
+        os.makedirs(p, exist_ok=True)
+        t = os.path.join(p, ".yazma_testi")
+        with open(t, "w") as f:
+            f.write("")
+        os.remove(t)
+        return p
+    except OSError:
+        return None
 
 
 def _resolve_output_dir():
-    if os.path.isdir(PROJE_DIZINI):
-        return PROJE_DIZINI
+    """Rapor cikti dizini — normalde test_scriptleri/ciktilar/.
+
+    Oncelik:
+      1) ADAPTX_TEST_CIKTI ortam degiskeni
+      2) Bu dosyanin klasoru + /ciktilar   (yalnizca isaret dosyasi varsa)
+      3) .blend klasorundeki test_scriptleri/ciktilar
+      4) SABIT_CIKTI_DIZINI                <- yapistirilmis + kaydedilmemis blend
+      5) ~/adaptx_test_ciktilari           <- son care
+
+    1-3 dinamik: proje tasinirsa kendiliginden dogru yeri bulur.
+    4 sabit: dinamik cozumun MUMKUN OLMADIGI tek senaryoyu (yapistirilmis script
+    + kaydedilmemis blend) kurtarir. Hicbir adim istisna firlatmaz.
+    """
+    env = os.environ.get("ADAPTX_TEST_CIKTI")
+    if env:
+        r = _yazilabilir(env)
+        if r:
+            return r
+
+    # 2) Script diskten calistirildiysa __file__ gercek yoldur.
     try:
-        return os.path.dirname(os.path.abspath(__file__))
+        d = os.path.dirname(os.path.abspath(__file__))
+        if _proje_dizini_mi(d):
+            r = _yazilabilir(os.path.join(d, "ciktilar"))
+            if r:
+                return r
     except NameError:
         pass
+
+    # 3) Blend kaydedilmisse onun klasorunden test_scriptleri'ni bul.
     if bpy.data.filepath:
-        return os.path.dirname(bpy.data.filepath)
-    return os.getcwd()
+        b = os.path.dirname(bpy.data.filepath)
+        for aday in (os.path.join(b, "test_scriptleri"), b):
+            if _proje_dizini_mi(aday):
+                r = _yazilabilir(os.path.join(aday, "ciktilar"))
+                if r:
+                    return r
+
+    # 4) Sabit yol — yapistirilmis script + kaydedilmemis blend senaryosu.
+    if SABIT_CIKTI_DIZINI:
+        r = _yazilabilir(SABIT_CIKTI_DIZINI)
+        if r:
+            return r
+        print("!! SABIT_CIKTI_DIZINI yazilamadi: " + SABIT_CIKTI_DIZINI)
+        print("!! Proje tasindiysa scriptin basindaki bu satiri guncelle.")
+
+    # 5) Son care — ev dizini.
+    son_care = os.path.join(os.path.expanduser("~"), "adaptx_test_ciktilari")
+    r = _yazilabilir(son_care)
+    print("!" * 70)
+    print("!! Ne dinamik cozum ne de SABIT_CIKTI_DIZINI islemedi.")
+    print("!! Rapor su klasore yaziliyor: " + str(r or os.path.expanduser("~")))
+    print("!" * 70)
+    return r or os.path.expanduser("~")
 
 
 def _write_report(lines):
