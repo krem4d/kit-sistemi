@@ -145,34 +145,53 @@
   background-attachment: fixed;
 }
 :root{--radius:12px; --radius-sm:8px; --radius-pill:999px;}
+/* Tipografi ölçeği — tek doğruluk kaynağı. Panelde çıplak px font-size YOK.
+   px bırakıldı (rem değil): offsetWidth/getComputedStyle CSS px döndürdüğü için
+   SERIT_W ↔ --serit-w sözleşmesi zoom altında da bozulmaz. */
+:root{
+  --fs-1:12px; --fs-2:13px; --fs-3:15px; --fs-4:17px; --fs-5:19px; --fs-6:22px;
+  --lh-tight:1.2; --lh-ui:1.35; --lh-metin:1.5;
+  --kontrol:26px;            /* checkbox + .parca-simge kenarı */
+  --serit-w:36px;            /* ⚠ JS SERIT_W ve .yigin-panel margin-right ile AYNI OLMAK
+                                ZORUNDA — hiçbir tema bloğu bu değişkeni EZMEMELİ */
+  --sekme-w:min(500px,92vw);
+}
 /* Obsidyen + Matris: minimalist, tamamen köşeli */
 :root[data-theme="obsidyen"], :root[data-theme="matris"]{--radius:0; --radius-sm:0; --radius-pill:0;}
 :root[data-theme="obsidyen"] .kart-baslik, :root[data-theme="matris"] .kart-baslik{background:var(--surface);}
 :root[data-theme="obsidyen"] .kart-baslik::before, :root[data-theme="matris"] .kart-baslik::before{display:none;}
 :root[data-theme="obsidyen"] .yigin-serit:hover, :root[data-theme="matris"] .yigin-serit:hover{background:var(--surface);}
 *{box-sizing:border-box;}
+[hidden]{display:none !important;}
 html,body{margin:0;padding:0;}
-body{background:var(--page);color:var(--ink);font-family:var(--font,system-ui,-apple-system,"Segoe UI",sans-serif);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;}
+html{height:100%;}
+/* ⚠ APP-SHELL: sayfa artık HİÇ kaydırmaz; kaydıran tek yer #ustBolum, .yigin ve
+   .yigin-panel'dir. main'e eklenen her yeni bölüm ya #ustBolum içine konmalı ya
+   da flex:none + kendi iç kaydırmasını taşımalı — yoksa sessizce kırpılır. */
+body{background:var(--page);color:var(--ink);font-family:var(--font,system-ui,-apple-system,"Segoe UI",sans-serif);font-size:var(--fs-3);line-height:var(--lh-metin);-webkit-font-smoothing:antialiased;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
 h1,h2,h3,h4{margin:0;}
 .muted{color:var(--muted);}
 .num{font-variant-numeric:tabular-nums;}
-.wrap{max-width:1680px;margin:0 auto;padding:0 20px 24px;}
+.wrap{max-width:1680px;margin:0 auto;width:100%;padding:0 20px 10px;}
+main.wrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
-header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);}
+header{position:relative;z-index:20;flex:none;background:var(--surface);border-bottom:1px solid var(--line);}
 .header-inner{max-width:1680px;margin:0 auto;padding:7px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-.header-inner h1{font-size:16px;font-weight:800;letter-spacing:-.01em;}
-.header-sag{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);}
+.header-inner h1{font-size:var(--fs-4);font-weight:800;letter-spacing:-.01em;}
+.header-sag{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:var(--fs-2);color:var(--ink-2);}
 
 .tema-kutu{position:relative;}
 .tema-nokta{width:14px;height:14px;border-radius:50%;display:inline-block;flex:none;border:1px solid var(--border);}
-.tema-panel{position:absolute;right:0;top:calc(100% + 8px);min-width:300px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;display:grid;grid-template-columns:repeat(2,minmax(135px,1fr));gap:6px;box-shadow:0 12px 32px rgba(0,0,0,.35);z-index:30;}
+/* max-height + overflow ZORUNLU: sayfa artık kaydırmadığı için (app-shell) taşan
+   açılır menünün alt sırasına başka türlü erişilemez. */
+.tema-panel{position:absolute;right:0;top:calc(100% + 8px);min-width:300px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;display:grid;grid-template-columns:repeat(2,minmax(135px,1fr));gap:6px;box-shadow:0 12px 32px rgba(0,0,0,.35);z-index:30;}
 .tema-panel[hidden]{display:none;}
-.tema-sec{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;text-align:left;}
+.tema-sec{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;color:var(--ink);font-size:var(--fs-3);font-weight:600;cursor:pointer;text-align:left;}
 .tema-sec:hover{background:rgba(var(--accent-rgb),.10);}
 .tema-sec.aktif{border-color:var(--accent);background:rgba(var(--accent-rgb),.08);}
 
-.pil{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--radius-pill);font-size:12px;font-weight:700;border:1px solid var(--border);background:var(--page);color:var(--ink);}
+.pil{display:inline-flex;align-items:center;padding:4px 11px;border-radius:var(--radius-pill);font-size:var(--fs-2);font-weight:700;border:1px solid var(--border);background:var(--page);color:var(--ink);}
 .pil-good{background:rgba(var(--good-rgb),.16);}
 .pil-warning{background:rgba(var(--warning-rgb),.20);}
 .pil-critical{background:rgba(var(--critical-rgb),.16);}
@@ -180,28 +199,39 @@ header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:
 .pil-nabiz{animation:nabiz 1.4s ease-in-out infinite;}
 @keyframes nabiz{0%,100%{opacity:1}50%{opacity:.55}}
 @media (prefers-reduced-motion: reduce){.pil-nabiz{animation:none;}}
-#baglantiPil{padding:3px 10px;border-radius:var(--radius-pill);background:rgba(var(--critical-rgb),.16);color:var(--ink);font-size:12px;font-weight:700;}
+#baglantiPil{padding:4px 11px;border-radius:var(--radius-pill);background:rgba(var(--critical-rgb),.16);color:var(--ink);font-size:var(--fs-2);font-weight:700;}
 
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;text-decoration:none;font-size:14px;font-weight:700;border:1px solid transparent;cursor:pointer;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;text-decoration:none;font-size:var(--fs-3);font-weight:700;border:1px solid transparent;cursor:pointer;}
 .btn.ghost{background:transparent;color:var(--ink);border-color:var(--border);}
-.btn.sm{padding:4px 10px;font-size:12px;font-weight:600;}
+.btn.sm{padding:5px 11px;font-size:var(--fs-2);font-weight:600;}
+.btn.ghost[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:rgba(var(--accent-rgb),.12);}
 
-.git-serit-sarici{position:sticky;top:41px;z-index:15;background:var(--page);border-bottom:1px solid var(--line);}
+.git-serit-sarici{position:relative;z-index:15;flex:none;background:var(--page);border-bottom:1px solid var(--line);}
 .git-serit{max-width:1680px;margin:0 auto;padding:5px 20px;display:flex;gap:5px;overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
-.git-pil{flex:none;padding:2px 8px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--surface);color:var(--ink-2);font-size:11px;font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums;}
+.git-pil{flex:none;padding:3px 9px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--surface);color:var(--ink-2);font-size:var(--fs-2);font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums;}
 .git-pil:hover{border-color:var(--accent);color:var(--ink);}
 .git-pil-warning{border-color:rgba(var(--warning-rgb),.55);}
 .git-pil-critical{border-color:rgba(var(--critical-rgb),.6);color:var(--critical);}
 .git-pil[hidden]{display:none;}
 
-.banner{margin-top:10px;padding:8px 12px;border-radius:var(--radius-sm);background:rgba(var(--serious-rgb),.14);border:1px solid rgba(var(--serious-rgb),.4);font-size:12px;color:var(--ink);}
+/* Gizlenebilir üst bölüm (odak modu bunu kapatır). flex:0 1 auto → yer sıkışınca
+   ÖNCE bu büzülür; "Sistem detayı" açıldığında sekme alanını yemek yerine kendi
+   içinde kaydırır. */
+#ustBolum{flex:0 1 auto;min-height:0;overflow-y:auto;max-height:min(52vh,460px);
+          scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+#ustBolum::-webkit-scrollbar{width:8px;}
+#ustBolum::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px;}
+
+.banner{flex:none;margin-top:10px;padding:10px 13px;border-radius:var(--radius-sm);background:rgba(var(--serious-rgb),.14);border:1px solid rgba(var(--serious-rgb),.4);font-size:var(--fs-2);color:var(--ink);}
 .banner > div + div{margin-top:2px;}
 
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:10px;}
-.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px;}
-.tile-etiket{font-size:11px;color:var(--muted);margin-bottom:1px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.tile-deger{font-size:19px;font-weight:800;line-height:1.15;letter-spacing:-.01em;}
-.tile-alt{font-size:10px;color:var(--muted);margin-top:2px;}
+/* minmax ↔ .tile-etiket ayrılmaz ikili: etiket 13px'e çıkarken 118px kutu
+   "Tamamlanan sipariş"i ellipsis'e düşürürdü. */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px;}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 13px;}
+.tile-etiket{font-size:var(--fs-2);color:var(--muted);margin-bottom:1px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tile-deger{font-size:var(--fs-5);font-weight:800;line-height:1.15;letter-spacing:-.01em;}
+.tile-alt{font-size:var(--fs-1);color:var(--muted);margin-top:2px;}
 .meter{margin-top:5px;}
 .meter-track{height:5px;border-radius:var(--radius-pill);background:var(--accent-100);overflow:hidden;}
 .meter-track.meter-warning{background:rgba(var(--warning-rgb),.2);}
@@ -211,25 +241,35 @@ header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:
 .meter-fill.meter-critical{background:var(--critical);}
 
 .sys-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-top:10px;padding:0 14px;}
-.sys-card summary{cursor:pointer;padding:8px 0;font-weight:700;font-size:13px;list-style:none;}
+.sys-card summary{cursor:pointer;padding:8px 0;font-weight:700;font-size:var(--fs-3);list-style:none;}
 .sys-card summary::-webkit-details-marker{display:none;}
 .sys-card summary::before{content:'▸ ';color:var(--muted);}
 .sys-card[open] summary::before{content:'▾ ';}
 .sys-detay{padding:4px 0 18px;}
-.sys-satir{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;}
-.sys-detay h4{font-size:12px;text-transform:uppercase;color:var(--muted);margin:18px 0 8px;letter-spacing:.04em;}
-.log-kutu{background:var(--page);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto;color:var(--ink-2);}
+.sys-satir{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:var(--fs-3);}
+.sys-detay h4{font-size:var(--fs-1);text-transform:uppercase;color:var(--muted);margin:18px 0 8px;letter-spacing:.04em;}
+/* monospace ~%8 geniş: 13px'te kalıyor, 15px uzun günlük satırlarını sarardı */
+.log-kutu{background:var(--page);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;font-size:var(--fs-2);line-height:var(--lh-metin);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto;color:var(--ink-2);}
 .ozet-linkler{display:flex;flex-wrap:wrap;gap:6px;}
 
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 10px;}
-.arama{flex:1;min-width:170px;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);font-size:13px;color:var(--ink);}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0;flex:none;}
+.arama{flex:1;min-width:170px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);font-size:var(--fs-3);color:var(--ink);}
 .chips{display:flex;gap:6px;flex-wrap:wrap;}
-.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--surface);font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--surface);font-size:var(--fs-3);font-weight:600;color:var(--ink-2);cursor:pointer;}
 .chip-aktif{background:rgba(var(--accent-rgb),.16);border-color:var(--accent);color:var(--ink);}
 .chip-sayi{color:var(--muted);font-variant-numeric:tabular-nums;}
 .chip-aktif .chip-sayi{color:var(--accent);}
 
-.badge{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:var(--radius-pill);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--ink);background:var(--surface);white-space:nowrap;}
+/* Pencere seçici (kaç sipariş çizilecek). Caret ::after ile çiziliyor: gömülü
+   SVG data-URI'nin rengi temayı takip etmez. */
+.pencere-kutu{position:relative;display:inline-flex;align-items:center;}
+.pencere-kutu::after{content:'▾';position:absolute;right:9px;pointer-events:none;color:var(--muted);font-size:var(--fs-1);}
+.pencere-sec{appearance:none;-webkit-appearance:none;padding:5px 26px 5px 12px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--surface);color:var(--ink-2);font-family:inherit;font-size:var(--fs-3);font-weight:600;cursor:pointer;}
+.pencere-sec option{background:var(--surface);color:var(--ink);}
+.pencere-bilgi{font-size:var(--fs-2);font-weight:600;color:var(--muted);white-space:nowrap;}
+.pencere-bilgi.kirpik{color:var(--accent);}
+
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:var(--radius-pill);border:1px solid var(--border);font-size:var(--fs-2);font-weight:700;color:var(--ink);background:var(--surface);white-space:nowrap;}
 .badge .dot{width:8px;height:8px;border-radius:50%;flex:none;}
 .badge-good{background:rgba(var(--good-rgb),.16);} .badge-good .dot{background:var(--good);}
 .badge-warning{background:rgba(var(--warning-rgb),.2);} .badge-warning .dot{background:var(--warning);}
@@ -243,37 +283,39 @@ header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:
    panolar; kaydırdıkça pano şeridi kenar yuvasına kayar, sıradaki pano
    yuvadan dışarı kendiliğinden açılır. Şerit genişliği JS'teki SERIT_W ile
    eşleşmeli. */
-.yigin{display:block;position:relative;overflow-x:auto;overflow-y:hidden;height:max(480px, calc(100vh - 235px));margin-top:0;border:1px solid var(--border);border-radius:var(--radius);background:var(--page);scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+/* isolation: JS panellere 1..N z-index yazıyor (682); yığın bağlamı olmasaydı
+   bu sayılar kök bağlamda yarışır ve 50'yi geçince toast'ın önüne geçerdi. */
+.yigin{display:block;position:relative;isolation:isolate;overflow-x:auto;overflow-y:hidden;flex:1 1 auto;min-height:220px;margin-top:0;border:1px solid var(--border);border-radius:var(--radius);background:var(--page);scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
 .yigin::-webkit-scrollbar{height:10px;}
 .yigin::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px;}
 #yiginSpacer{height:1px;}
-.yigin-sekme{display:flex;align-items:stretch;position:absolute;top:0;bottom:0;width:min(452px,88vw);background:var(--surface);border-left:1px solid var(--line);box-shadow:-4px 0 10px rgba(0,0,0,.22);contain:layout paint;will-change:transform;}
+.yigin-sekme{display:flex;align-items:stretch;position:absolute;top:0;bottom:0;width:var(--sekme-w);background:var(--surface);border-left:1px solid var(--line);box-shadow:-4px 0 10px rgba(0,0,0,.22);contain:layout paint;will-change:transform;}
 .yigin-sekme[hidden]{display:none;}
-.yigin-serit{flex:none;width:36px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;background:var(--surface);border:none;border-right:1px solid var(--line);cursor:pointer;user-select:none;color:inherit;font-family:inherit;}
+.yigin-serit{flex:none;width:var(--serit-w);display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;background:var(--surface);border:none;border-right:1px solid var(--line);cursor:pointer;user-select:none;color:inherit;font-family:inherit;}
 .yigin-serit:hover{background:rgba(var(--accent-rgb),.12);}
 .serit-nokta{width:8px;height:8px;border-radius:50%;flex:none;background:var(--muted);}
 .nokta-good{background:var(--good);} .nokta-warning{background:var(--warning);} .nokta-critical{background:var(--critical);}
-.serit-no{writing-mode:vertical-rl;font-size:13px;font-weight:800;letter-spacing:.1em;color:var(--tx-1);white-space:nowrap;}
-.serit-ilerleme{writing-mode:vertical-rl;font-size:10px;font-weight:700;color:var(--muted);margin-top:auto;}
+.serit-no{writing-mode:vertical-rl;font-size:var(--fs-3);font-weight:800;letter-spacing:.1em;color:var(--tx-1);white-space:nowrap;}
+.serit-ilerleme{writing-mode:vertical-rl;font-size:var(--fs-1);font-weight:700;color:var(--muted);margin-top:auto;}
 .yigin-sekme.kart-tamam .serit-ilerleme{color:var(--good);}
 /* margin-right = SERIT_W: açık panolar adim (panelW - SERIT_W) aralıklı dizilir;
    bu boşluk olmadan bir sonraki panonun şeridi bu panonun checkbox sütununa biner. */
-.yigin-panel{flex:1;min-width:0;margin-right:36px;background:var(--surface);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+.yigin-panel{flex:1;min-width:0;margin-right:var(--serit-w);background:var(--surface);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
 .yigin-panel::-webkit-scrollbar{width:8px;}
 .yigin-panel::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px;}
-.yigin-bos{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:15px;}
+.yigin-bos{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:var(--fs-3);}
 .yigin-bos[hidden]{display:none;}
-.kart-baslik{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 14px;background:linear-gradient(180deg, rgba(var(--accent-rgb),.12), rgba(var(--accent-rgb),.02)),var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1;}
+.kart-baslik{display:flex;align-items:center;column-gap:10px;row-gap:6px;flex-wrap:wrap;padding:10px 14px;background:linear-gradient(180deg, rgba(var(--accent-rgb),.12), rgba(var(--accent-rgb),.02)),var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1;}
 .kart-baslik::before{content:'';position:absolute;top:0;left:14px;right:14px;height:3px;background:var(--accent);border-radius:0 0 3px 3px;opacity:.65;}
 .kart-tamam .kart-baslik::before{background:var(--good);opacity:1;}
-.kart-no{font-size:18px;font-weight:800;color:var(--tx-1);letter-spacing:-.01em;}
-.kart-parca-sayisi{font-size:12px;}
+.kart-no{font-size:var(--fs-6);line-height:var(--lh-tight);font-weight:800;color:var(--tx-1);letter-spacing:-.01em;}
+.kart-parca-sayisi{font-size:var(--fs-2);}
 .kart-baslik-sag{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.kart-link{font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);}
+.kart-link{font-size:var(--fs-2);font-weight:700;color:var(--accent);text-decoration:none;padding:4px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);}
 .kart-link:hover{border-color:var(--accent);}
 /* Animasyon rozeti: sistem otomatik belirler (Drive'da <no>.mp4 var mı), kullanıcı
    değiştiremez — diğer kart-link butonlarından bilinçli olarak daha büyük/belirgin. */
-.rozet-animasyon{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:var(--radius-pill);font-size:13px;font-weight:800;text-decoration:none;border:1.5px solid transparent;white-space:nowrap;}
+.rozet-animasyon{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--radius-pill);font-size:var(--fs-3);font-weight:800;text-decoration:none;border:1.5px solid transparent;white-space:nowrap;}
 .rozet-animasyon .dot{width:9px;height:9px;border-radius:50%;flex:none;}
 .rozet-var{background:rgba(var(--good-rgb),.20);color:var(--good);border-color:rgba(var(--good-rgb),.6);cursor:pointer;}
 .rozet-var:hover{background:rgba(var(--good-rgb),.32);}
@@ -282,39 +324,82 @@ header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:
 .rozet-yok .dot{background:var(--critical);}
 
 .kart-govde{padding:2px 14px;}
-.kart-durum-mesaj{padding:14px 0;font-size:14px;}
+.kart-durum-mesaj{padding:16px 0;font-size:var(--fs-3);}
 
-.parca-satir{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;}
+/* Satır yüksekliğini yazı değil KONTROLLER belirler: 7 + 26 + 7 + 1px çizgi = 41px.
+   (Ölçüldü: checkbox'ın 3px varsayılan margin'i sıfırlanmazsa 47px kalır — eski
+   satır da bu yüzden 47px'ti.) Yani yazı %21-36 büyürken satır 6px KISALIYOR.
+   --kontrol, padding ve checkbox margin'i birlikte değiştirilmeli. */
+.parca-satir{display:flex;align-items:center;gap:10px;padding:7px 0;line-height:var(--lh-tight);border-bottom:1px solid var(--line);cursor:pointer;}
 .parca-satir:last-of-type{border-bottom:none;}
+.parca-satir:hover{background:rgba(var(--accent-rgb),.06);}
 .parca-satir.ucuyor{opacity:.5;}
-.parca-simge{width:24px;height:24px;border-radius:var(--radius-sm);background:var(--page);display:flex;align-items:center;justify-content:center;flex:none;color:var(--muted);font-size:13px;}
-.parca-ad{flex:1;font-size:14px;color:var(--ink);min-width:0;}
-.parca-miktar{font-size:14px;color:var(--tx-2);font-weight:700;white-space:nowrap;}
-.parca-zaman{font-size:10px;white-space:nowrap;min-width:58px;text-align:right;}
-.parca-satir input[type=checkbox]{width:24px;height:24px;accent-color:var(--accent);cursor:pointer;flex:none;}
+.parca-simge{width:var(--kontrol);height:var(--kontrol);border-radius:var(--radius-sm);background:var(--page);display:flex;align-items:center;justify-content:center;flex:none;color:var(--muted);font-size:var(--fs-3);}
+.parca-ad{flex:1;font-size:var(--fs-4);line-height:var(--lh-tight);color:var(--ink);min-width:0;overflow-wrap:anywhere;}
+.parca-miktar{font-size:var(--fs-5);color:var(--tx-2);font-weight:800;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+/* Gram, tartılan grupta operatörün asıl kullandığı sayı: --muted değil --ink-2
+   (13 temanın 6'sında muted/surface kontrastı 4,5:1'in altındaydı) ve 15px. */
+.parca-gram{font-size:var(--fs-3);font-weight:600;color:var(--ink-2);margin-left:7px;font-variant-numeric:tabular-nums;}
+.parca-zaman{font-size:var(--fs-1);white-space:nowrap;min-width:42px;text-align:right;font-variant-numeric:tabular-nums;}
+.parca-satir input[type=checkbox]{width:var(--kontrol);height:var(--kontrol);margin:0;accent-color:var(--accent);cursor:pointer;flex:none;}
+/* Grup başlığı KARDEŞ öğe, sarmalayıcı DEĞİL: sarmalayıcı div
+   .parca-satir:last-of-type{border-bottom:none} kuralını grup başına çalıştırır. */
+.parca-grup{display:flex;align-items:center;gap:8px;margin:12px 0 4px;font-size:var(--fs-2);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);font-weight:700;}
+.parca-grup:first-child{margin-top:4px;}
+.parca-grup::after{content:"";flex:1;height:1px;background:var(--line);}
 
-.kart-tumunu{width:100%;margin:8px 0 4px;padding:8px;border-radius:var(--radius-sm);border:1px dashed var(--border);background:transparent;color:var(--ink-2);font-size:12px;font-weight:700;cursor:pointer;}
+.kart-tumunu{width:100%;margin:8px 0 4px;padding:10px;border-radius:var(--radius-sm);border:1px dashed var(--border);background:transparent;color:var(--ink-2);font-size:var(--fs-2);font-weight:700;cursor:pointer;}
 .kart-tumunu:hover{border-color:var(--accent);color:var(--accent);}
 
 .not-bolum{margin:8px 0 12px;}
-.not-ust{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
-.not-kutu{display:block;width:100%;min-height:38px;max-height:140px;resize:vertical;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--page);color:var(--ink);font-family:inherit;font-size:12px;line-height:1.45;}
+.not-ust{display:flex;justify-content:space-between;align-items:baseline;font-size:var(--fs-1);color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+/* min-height ↔ font-size ayrılmaz: rows=2 × 22px + padding + kenarlık ≈ 52px */
+.not-kutu{display:block;width:100%;min-height:52px;max-height:140px;resize:vertical;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--page);color:var(--ink);font-family:inherit;font-size:var(--fs-3);line-height:var(--lh-metin);}
 .not-kutu:focus{border-color:var(--accent);outline:none;}
 .not-kutu::placeholder{color:var(--muted);}
 
-.ilerleme-metin{font-size:12px;font-weight:800;color:var(--ink-2);}
-.ilerleme-bar{display:inline-block;width:52px;height:6px;border-radius:var(--radius-pill);background:var(--accent-100);overflow:hidden;vertical-align:middle;margin-left:6px;}
+.ilerleme-metin{font-size:var(--fs-2);font-weight:800;color:var(--ink-2);}
+.ilerleme-bar{display:inline-block;width:56px;height:7px;border-radius:var(--radius-pill);background:var(--accent-100);overflow:hidden;vertical-align:middle;margin-left:6px;}
 .ilerleme-dolum{display:block;height:100%;background:var(--good);border-radius:var(--radius-pill);}
 
-footer.altbilgi{text-align:center;color:var(--muted);font-size:11px;padding:12px 0 20px;}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--page);padding:12px 20px;border-radius:var(--radius-sm);font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;}
+footer.altbilgi{flex:none;text-align:center;color:var(--muted);font-size:var(--fs-1);padding:5px 0 7px;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--page);padding:12px 20px;border-radius:var(--radius-sm);font-size:var(--fs-3);font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;}
 .toast.show{opacity:1;}
 
+/* ── Odak modu: üst widget'lar gizli, sekmeler tam yükseklik ─────────────────
+   Yalnızca dikey alan değişir; sekme genişliği (--sekme-w) BİLEREK aynı kalır,
+   böylece geçiş saf CSS olur — yiginYerlesim()/render() çağrısı gerekmez.
+   Geometri transition'ı yok: her kare düzen tetikler ve yiginKaydir() ~292
+   paneli gezmek zorunda kalırdı. Hiçbir tema değişkeni ezilmiyor. */
+:root.odak .header-inner{padding:4px 20px;}
+:root.odak .toolbar{margin:6px 0;}
+:root.odak footer.altbilgi{display:none;}
+:root.odak .yigin{border-radius:var(--radius-sm);}
+
 @media (max-width:720px){
-  .yigin{height:max(420px, calc(100vh - 250px));}
-  .wrap{padding:0 10px 32px;}
+  .wrap{padding:0 10px 8px;}
+  #ustBolum{max-height:44vh;}
   .git-serit{padding:5px 10px;}
   .tema-panel{grid-template-columns:1fr;min-width:190px;}
+}
+@media (max-height:640px){
+  #ustBolum{max-height:38vh;}
+  footer.altbilgi{display:none;}
+}
+/* Dar ekran (telefon): sekme 92vw'ye düşünce parça satırının sabit maliyeti
+   (simge + checkbox + zaman + boşluklar) ada yer bırakmıyor ve isim harf harf
+   sarıyor. Ölçek değişkenlerini bir basamak düşür — JS'in okuduğu --serit-w ve
+   --sekme-w sözleşmesine DOKUNMA. */
+@media (max-width:560px){
+  :root{--fs-4:15px; --fs-5:17px; --kontrol:24px;}
+  .parca-satir{gap:8px;}
+  .parca-zaman{min-width:0;}
+  .parca-gram{margin-left:5px;}
+}
+/* Telefon: .parca-simge şu an tamamen dekoratif (PARCA_GORSEL boş, herkes aynı
+   ◇). Bilgi taşıyan tek şey adın kendisi — 32px'i ona ver. */
+@media (max-width:440px){
+  .parca-simge{display:none;}
 }
 </style>
 </head>
@@ -333,26 +418,41 @@ footer.altbilgi{text-align:center;color:var(--muted);font-size:11px;padding:12px
       </div>
       <span id="baglantiPil" hidden role="status" aria-live="polite"></span>
       <span id="guncellendi">—</span>
+      <button id="odakBtn" class="btn ghost sm" type="button" aria-pressed="false"
+              aria-controls="ustBolum gitSeritSarici"
+              title="Odak modu — üst panelleri gizle (F)">Odak</button>
       <button id="yenileBtn" class="btn ghost sm" type="button">Yenile</button>
     </div>
   </div>
 </header>
 
-<div class="git-serit-sarici"><div id="hizliGit" class="git-serit" aria-label="Siparişler arasında hızlı git"></div></div>
+<div id="gitSeritSarici" class="git-serit-sarici"><div id="hizliGit" class="git-serit" aria-label="Siparişler arasında hızlı git"></div></div>
 
 <main class="wrap">
+  <!-- Uyarı bandı BİLEREK #ustBolum'un dışında: sipariş no'su okunamayan FBX ve
+       bozuk JSON için tek yüzey, odak modunda da görünmeli. Boşken zaten hidden. -->
   <div id="uyariKutu" class="banner" hidden></div>
-  <section id="kpiGrid" class="kpi-grid"></section>
+  <div id="ustBolum">
+    <section id="kpiGrid" class="kpi-grid"></section>
 
-  <details class="sys-card">
-    <summary>Sistem detayı</summary>
-    <div id="sysDetay" class="sys-detay"></div>
-  </details>
+    <details class="sys-card">
+      <summary>Sistem detayı</summary>
+      <div id="sysDetay" class="sys-detay"></div>
+    </details>
+  </div>
 
   <div class="toolbar">
     <input id="aramaKutu" class="arama" type="search" placeholder="Sipariş no ara…  ( / )">
     <div id="filtreBar" class="chips"></div>
     <button id="bitenGizleBtn" class="chip" type="button" title="Animasyonu olan ve tüm küçük parçaları işaretlenmiş siparişleri sekmelerden gizle">Bitenleri gizle</button>
+    <span class="pencere-kutu">
+      <select id="pencereSec" class="pencere-sec" aria-label="Gösterilecek sipariş sayısı"
+              title="Arama ve filtreler her zaman TÜM siparişlerde çalışır; bu sınır yalnızca kaç sekmenin çizileceğini belirler.">
+        <option value="50">Son 50</option><option value="100">Son 100</option>
+        <option value="200">Son 200</option><option value="0">Hepsi</option>
+      </select>
+    </span>
+    <span id="pencereBilgi" class="pencere-bilgi num"></span>
     <button id="yonBtn" class="btn ghost sm" type="button">↓ No</button>
   </div>
 
@@ -368,7 +468,9 @@ footer.altbilgi{text-align:center;color:var(--muted);font-size:11px;padding:12px
 <script>
 'use strict';
 
-/* pdf_uret.py ile birebir aynı satır sırası ve gram eşlemesi */
+/* Gram eşlemesi pdf_uret.py ile birebir; SATIR SIRASI kasıtlı olarak farklı:
+   panel ROWS sırasını grup içinde korur ama satırları tartılan/adetle sayılan
+   diye iki gruba ayırır (bkz. TARTILAN). */
 const ROWS = [
   ["Frenli Menteşe","Frenli Menteşe"],["Frensiz Menteşe","Frensiz Menteşe"],
   ["Menteşe Tabanı","Menteşe Tabanı"],["Modül Bağlantı","Modülleri Birbirine Bağlama"],
@@ -385,6 +487,14 @@ const GRAM_KEY = {
   "Linco Dübel":"Linco Dübel", "Linco Gövde":"Linco", "Linco Kapak":"Linco Kapak",
   "Arkalık Çivisi":"Çivi",
 };
+/* Tartılarak sayılan parçalar — Ağırlıklar.md ile 1:1. Object.keys(GRAM_KEY)
+   türetmesi ikinci bir doğruluk kaynağı doğmasını yapısal olarak engeller.
+   ⚠ Ağırlıklar.md'ye yeni parça eklenirse GRAM_KEY güncellenmeli (pdf_uret.py'de
+   de) — kayarsa satır sadece gramını değil doğru GRUBUNU da kaybeder.
+   Küme STATİK: "tartılarak sayılmak" parça türünün özelliği, tek bir siparişin
+   verisinin değil — siparişin gram sözlüğüne bakmak satır sırasını karttan
+   karta oynatırdı. */
+const TARTILAN = new Set(Object.keys(GRAM_KEY));
 const PARCA_GORSEL = {}; /* ileride: {"Kulp":"/gorseller/kulp.png", ...} — şimdilik boş */
 const VARSAYILAN_SIMGE = '◇';
 const DURUM_META = {
@@ -400,6 +510,12 @@ let arama = '';
 let bitenGizle = true;
 try{ const kayitli = localStorage.getItem('adaptx_biten_gizle'); if (kayitli !== null) bitenGizle = kayitli === '1'; }catch(e){}
 let siralamaYonu = 'azalan';  /* sunucu azalan gönderir (en büyük no en başta) */
+/* Pencere: kaç sipariş ÇİZİLECEK. Arama/filtre/sayaçlar her zaman tüm siparişler
+   üzerinde çalışır — bu yalnızca DOM maliyetini sınırlar. */
+const PENCERE_SECENEK = [50, 100, 200, 0];   /* 0 = tümü */
+let pencere = 50;
+try{ const k = localStorage.getItem('adaptx_pencere');
+     if (k !== null && PENCERE_SECENEK.includes(parseInt(k,10))) pencere = parseInt(k,10); }catch(e){}
 const checklistMap = {};   /* no -> {parca: iso|null} — sunucudan sürekli beslenen yerel önbellek */
 const ucusta = new Set();  /* "no|parca" — yalnızca POST uçuştayken geçersiz kılma sinyali */
 const kartNodeMap = new Map();
@@ -420,14 +536,15 @@ function fmtSayi(v){
   if (typeof v === 'number') return String(v).replace('.',',');
   return String(v);
 }
-function hucreDeger(adet, gram, key){
-  const s = fmtSayi(adet[key]);
-  if (s === '') return '';
-  if (GRAM_KEY[key]){
-    const g = gram[GRAM_KEY[key]];
-    if (g !== null && g !== undefined) return s + ' / ' + fmtSayi(g);
-  }
-  return s;
+/* Gram artık adetten ayrı bir alan: ayrı boyut/renk alabiliyor ve gram 0 iken
+   eski "115 / " gibi sonu kopuk metin üretilmiyor. */
+function gramDeger(gram, key){
+  const gk = GRAM_KEY[key];
+  if (!gk) return '';
+  const g = gram[gk];
+  if (g === null || g === undefined) return '';
+  const s = fmtSayi(g);
+  return s === '' ? '' : s + ' g';
 }
 function mbStr(b){
   if (b === null || b === undefined) return '';
@@ -440,6 +557,15 @@ function zamanStr(epoch){
 function isoStr(iso){
   if (!iso) return '';
   return new Date(iso).toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+/* Parça işaretleme zamanı: bugünse saat, eskiyse gün.ay — 11 karakter yerine 5.
+   Tam tarih title'da kalır. isoStr() silinmiyor, not zamanı için kullanılıyor. */
+function saatStr(iso){
+  if (!iso) return '';
+  const d = new Date(iso), n = new Date();
+  return d.toDateString() === n.toDateString()
+    ? d.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})
+    : d.toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'});
 }
 function sonrakiTurStr(epoch){
   const simdi = Date.now()/1000;
@@ -508,7 +634,12 @@ function temaPanelKur(){
   ).join('');
 }
 function temaPanelAc(ac){
-  document.getElementById('temaPanel').hidden = !ac;
+  const panel = document.getElementById('temaPanel');
+  panel.hidden = !ac;
+  /* Yükseklik açılışta ÖLÇÜLEREK sınırlanır: sayfa kaydırmadığı (app-shell) ve
+     başlık dar ekranda sarıp panelin üst kenarını aşağı ittiği için sabit bir
+     calc() offset'i tutmaz. */
+  if (ac) panel.style.maxHeight = Math.max(160, window.innerHeight - panel.getBoundingClientRect().top - 12) + 'px';
   document.getElementById('temaBtn').setAttribute('aria-expanded', String(ac));
 }
 function temaBaslat(){
@@ -517,6 +648,26 @@ function temaBaslat(){
   try{ key = localStorage.getItem('adaptx_tema') || 'uzay'; }catch(e){}
   temaUygula(key);
 }
+
+/* ---------------- odak modu ----------------
+   Üst widget'ları gizler, sekme yığını boşalan yüksekliği kendiliğinden alır
+   (app-shell + .yigin{flex:1}). Yerleşim matematiği YALNIZCA genişlik okuduğu
+   için burada yiginYerlesim()/render() çağrısı BİLEREK yok. */
+let odak = false;
+try{ odak = localStorage.getItem('adaptx_odak') === '1'; }catch(e){}
+function odakUygula(kaydet){
+  document.documentElement.classList.toggle('odak', odak);
+  document.getElementById('ustBolum').hidden = odak;
+  document.getElementById('gitSeritSarici').hidden = odak;
+  const b = document.getElementById('odakBtn');
+  b.setAttribute('aria-pressed', String(odak));
+  /* Süslü simge yok: ⛶/↙ birçok Linux yazı tipinde tofu kutusuna düşüyor.
+     Durum sinyali aria-pressed + .btn.ghost[aria-pressed=true] vurgusu. */
+  b.textContent = odak ? 'Odaktan çık' : 'Odak';
+  b.title = odak ? 'Odak modundan çık (F veya Esc)' : 'Odak modu — üst panelleri gizle (F)';
+  if (kaydet){ try{ localStorage.setItem('adaptx_odak', odak ? '1' : '0'); }catch(e){} }
+}
+function odakDegistir(){ odak = !odak; odakUygula(true); }
 
 /* ---------------- kayan paneller (sliding panes) ----------------
    Tüm sekmeler her zaman açık birer panel. Kenarlarda en fazla K şerit
@@ -528,10 +679,13 @@ function temaBaslat(){
    sapma transform ile uygulanır, böylece kaydırma oranında yavaş yavaş
    açılıp kapanırlar. SERIT_W, CSS'teki .yigin-serit genişliğiyle aynı
    olmalı. */
-const SERIT_W = 36;
-let yiginNodlar = [];      /* görünür (filtre/aramadan geçen) sekme düğümleri, sırayla */
-let yiginPanelW = 452;
-let yiginAdim = 452 - SERIT_W;
+/* ⚠ SÖZLEŞME: .yigin-serit width'i ve .yigin-panel margin-right'ı ile aynı olmak
+   zorunda. Üç yerde ayrı sayı yazmak yerine tek CSS değişkeninden okunuyor. */
+const SERIT_W = parseFloat(getComputedStyle(document.documentElement)
+                  .getPropertyValue('--serit-w')) || 36;
+let yiginNodlar = [];      /* çizilen (filtre/arama/pencereden geçen) sekme düğümleri, sırayla */
+let yiginPanelW = 500;     /* ilk kareden önceki yedek; gerçek değer offsetWidth'ten gelir */
+let yiginAdim = 500 - SERIT_W;
 let yiginK = 6;
 function gorunurSekmeler(){
   const sonuc = [];
@@ -679,13 +833,19 @@ function parcaSatirlari(o){
   const satirlar = [];
   for (const [etiket, anahtar] of ROWS){
     if (!adet[anahtar]) continue;
-    satirlar.push({key:anahtar, etiket, deger:hucreDeger(adet,gram,anahtar)});
+    satirlar.push({key:anahtar, etiket, deger:fmtSayi(adet[anahtar]),
+                   gram:gramDeger(gram,anahtar), tartili:TARTILAN.has(anahtar)});
     if (etiket === RAY_INSERT_AFTER){
       const rayAnahtarlari = Object.keys(ray).filter(k=>ray[k]).sort((a,b)=>parseInt(b,10)-parseInt(a,10));
-      for (const k of rayAnahtarlari) satirlar.push({key:'ray:'+k, etiket:'Ray Seti '+k, deger:fmtSayi(ray[k])});
+      for (const k of rayAnahtarlari)
+        satirlar.push({key:'ray:'+k, etiket:'Ray Seti '+k, deger:fmtSayi(ray[k]), gram:'', tartili:false});
     }
   }
-  return satirlar;
+  /* KARARLI ikiye ayırma: grup İÇİNDE ROWS (= PDF) sırası korunur, böylece panel
+     PDF'in yeniden sıralanmışı değil GRUPLANMIŞI olur. Ray setleri gram'sız
+     olduğu için ikinci gruba düşer ve "L Bağlantı Seti"nin hemen ardındaki
+     yerini özel kod olmadan korur. */
+  return satirlar.filter(s=>s.tartili).concat(satirlar.filter(s=>!s.tartili));
 }
 function parcaSatirHtml(no, s){
   const veri = checklistMap[no] || {};
@@ -696,8 +856,9 @@ function parcaSatirHtml(no, s){
   return '<label class="parca-satir'+(ucuyorMu?' ucuyor':'')+'" for="'+id+'">'
     + '<span class="parca-simge" aria-hidden="true">'+simge+'</span>'
     + '<span class="parca-ad">'+esc(s.etiket)+'</span>'
-    + '<span class="parca-miktar num">'+esc(s.deger)+'</span>'
-    + '<span class="parca-zaman muted">'+(zaman?isoStr(zaman):'')+'</span>'
+    + '<span class="parca-miktar num">'+esc(s.deger)
+      + (s.gram ? '<span class="parca-gram">'+esc(s.gram)+'</span>' : '')+'</span>'
+    + '<span class="parca-zaman muted" title="'+(zaman?esc(isoStr(zaman)):'')+'">'+(zaman?esc(saatStr(zaman)):'')+'</span>'
     + '<input type="checkbox" id="'+id+'" '+(zaman?'checked':'')+' data-no="'+esc(no)+'" data-parca="'+esc(s.key)+'">'
     + '</label>';
 }
@@ -750,7 +911,15 @@ function kartGovdeHtml(o){
     } else {
       const veri = checklistMap[o.no] || {};
       const kalanVar = satirlar.some(s => !veri[s.key]);
-      icerik = satirlar.map(s => parcaSatirHtml(o.no, s)).join('')
+      let oncekiGrup = null;
+      icerik = satirlar.map(s => {
+        let bas = '';
+        if (s.tartili !== oncekiGrup){
+          bas = '<div class="parca-grup">'+(s.tartili ? 'Tartılarak sayılan' : 'Adetle sayılan')+'</div>';
+          oncekiGrup = s.tartili;
+        }
+        return bas + parcaSatirHtml(o.no, s);
+      }).join('')
         + (kalanVar ? '<button class="kart-tumunu" type="button" data-no="'+esc(o.no)+'">Tümünü işaretle</button>' : '');
     }
   }
@@ -829,6 +998,8 @@ function diskTileHtml(disk){
     + '<div class="meter"><div class="meter-track meter-'+sinif+'"><div class="meter-fill meter-'+sinif+'" style="width:'+yuzde+'%"></div></div></div>'
     + '<div class="tile-alt">'+bosGb+' GB boş / '+topGb+' GB</div></div>';
 }
+/* ⚠ Sayılar HER ZAMAN tüm siparişler üzerinden (`d`), pencereden bağımsız:
+   KPI boru hattının durumunu anlatır, görünen sekme sayısını değil. */
 function cizKpi(d){
   const s = d.sayac;
   let isaretli=0, toplamParca=0;
@@ -858,6 +1029,8 @@ function cizSistemDetay(sistem){
     + '<h4>Son günlük satırları</h4><pre class="log-kutu">'+loglar+'</pre>'
     + '<h4>Özet PDF\'ler ('+ozetAdet+')</h4><div class="ozet-linkler">'+(ozetLinkler || '<span class="muted">Henüz yok</span>')+'</div>';
 }
+/* ⚠ Pencereden bağımsız: çip sayısı, çipe tıklandığında neyin bulunacağının
+   vaadidir. Pencereye bağlanırsa "Hatalı 7" yazıp 2 kart göstermeye başlar. */
 function filtreSayilar(d){
   const s = d.sayac;
   let eksik=0, tamam=0;
@@ -893,12 +1066,29 @@ function gecer(r){
   }
   return true;
 }
-function gorunurlukUygula(liste){
-  for (const r of liste){
-    const gizli = !gecer(r);
-    const kart = kartNodeMap.get(r.no); if (kart) kart.hidden = gizli;
-    const pil = stripNodeMap.get(r.no); if (pil) pil.hidden = gizli;
+/* Pencere, gecer()'den GEÇMİŞ listenin ön ekidir. Kaynak dizi her zaman
+   sunucunun azalan sırası (panel.py:404 — "son 50" bu sözleşmeye dayanır);
+   yön toggle'ı bu dilim ALINDIKTAN sonra uygulanır, böylece artan/azalan
+   modda aynı 50 sipariş görünür. */
+function pencereUygula(gecenler, tumu){
+  if (!pencere) return gecenler;
+  const dilim = gecenler.slice(0, pencere);
+  /* Not yazılırken kart DOM'dan silinmesin: metin kaybolmaz (notPlanla timer'ı
+     DOM'dan bağımsız) ama odak ve caret kaybolurdu. */
+  if (notDuzenleniyor && !dilim.some(r => r.no === notDuzenleniyor)){
+    const pin = tumu.find(r => r.no === notDuzenleniyor);
+    if (pin) dilim.push(pin);
   }
+  return dilim;
+}
+function pencereBilgiCiz(toplam, eslesen, cizilen){
+  const el = document.getElementById('pencereBilgi');
+  const kirpik = cizilen < eslesen;
+  el.classList.toggle('kirpik', kirpik);
+  if (kirpik && eslesen === toplam) el.textContent = toplam + ' içinden son ' + cizilen;
+  else if (kirpik)                  el.textContent = eslesen + ' eşleşmeden son ' + cizilen + ' (toplam ' + toplam + ')';
+  else if (eslesen === toplam)      el.textContent = toplam + ' sipariş';
+  else                              el.textContent = eslesen + ' eşleşme / ' + toplam;
 }
 
 /* ---------------- ana render ---------------- */
@@ -910,7 +1100,11 @@ function render(d){
   cizSistemDetay(d.sistem);
   cizFiltreler(d);
 
-  const sirali = siralamaYonu === 'artan' ? d.siparisler.slice().reverse() : d.siparisler;
+  /* SIRA KRİTİK: filtrele → dilimle → yönü uygula. Önce reverse edilseydi
+     "artan" modda pencere en ESKİ 50 siparişi gösterirdi. */
+  const gecenler  = d.siparisler.filter(gecer);
+  const pencereli = pencereUygula(gecenler, d.siparisler);
+  const sirali    = siralamaYonu === 'artan' ? pencereli.slice().reverse() : pencereli;
 
   reconcile(document.getElementById('yigin'), sirali, r=>r.no, siparisImza, kartOlustur, kartNodeMap, (node,o)=>{
     node.innerHTML = kartIcerikHtml(o);
@@ -922,13 +1116,12 @@ function render(d){
     node.title = stripPilBaslik(o);
   });
 
-  gorunurlukUygula(sirali);
   yiginYerlesim();
 
-  const gorunur = sirali.filter(gecer);
-  document.getElementById('yiginBos').hidden = gorunur.length > 0;
+  document.getElementById('yiginBos').hidden = sirali.length > 0;
   /* arama tek sonuca inince o sekmeye kaydır */
-  if (arama.trim() && gorunur.length === 1) sekmeyeGit(gorunur[0].no);
+  if (arama.trim() && sirali.length === 1) sekmeyeGit(sirali[0].no);
+  pencereBilgiCiz(d.siparisler.length, gecenler.length, sirali.length);
   document.getElementById('guncellendi').textContent = 'Güncellendi ' + zamanStr(d.zaman);
 }
 
@@ -1029,7 +1222,11 @@ document.getElementById('yigin').addEventListener('input', (e) => {
 document.getElementById('yigin').addEventListener('wheel', (e) => {
   if (e.target.closest('.yigin-panel')) return;
   if (Math.abs(e.deltaY) > Math.abs(e.deltaX)){
-    e.currentTarget.scrollLeft += e.deltaY;
+    /* deltaMode: 0=piksel (Chromium), 1=SATIR (Firefox/Zen — deltaY≈3 gelir,
+       çarpan olmadan tık başına 3px kayar ve tekerlek pratikte çalışmaz),
+       2=sayfa. */
+    const carpan = e.deltaMode === 1 ? 16 : (e.deltaMode === 2 ? e.currentTarget.clientWidth : 1);
+    e.currentTarget.scrollLeft += e.deltaY * carpan;
     e.preventDefault();
   }
 }, {passive:false});
@@ -1044,16 +1241,34 @@ document.getElementById('yigin').addEventListener('scroll', () => {
   requestAnimationFrame(() => { yiginKaydirBekliyor = false; yiginKaydir(); });
 });
 window.addEventListener('resize', () => yiginYerlesim());
+/* Çizilen liste KULLANICI eliyle değiştiğinde yatay kaydırma başa döner: liste
+   kısalınca tarayıcı scrollLeft'i yeni maksimuma kırpar ve kullanıcı listenin
+   ortasında/sonunda bulur kendini. Poll'de (yenile → render) YAPILMAZ. */
+function yiginBasaDon(){ document.getElementById('yigin').scrollLeft = 0; }
 document.getElementById('filtreBar').addEventListener('click', (e) => {
   const b = e.target.closest('.chip');
   if (!b) return;
   filtre = b.dataset.filtre;
+  yiginBasaDon();
   if (lastData) render(lastData);
 });
+/* Debounce: filtreleme artık hidden bayrağı çevirmiyor, reconcile girdisini
+   değiştiriyor — her tuş vuruşu kart yaratıp yıkıyor. */
+let aramaTimer = null;
 document.getElementById('aramaKutu').addEventListener('input', (e) => {
   arama = e.target.value;
+  clearTimeout(aramaTimer);
+  aramaTimer = setTimeout(() => { yiginBasaDon(); if (lastData) render(lastData); }, 180);
+});
+const pencereSecEl = document.getElementById('pencereSec');
+pencereSecEl.value = String(pencere);
+pencereSecEl.addEventListener('change', (e) => {
+  pencere = parseInt(e.target.value, 10) || 0;
+  try{ localStorage.setItem('adaptx_pencere', String(pencere)); }catch(e){}
+  yiginBasaDon();   /* ZORUNLU: #yiginSpacer küçülünce eski scrollLeft aralık dışında kalır */
   if (lastData) render(lastData);
 });
+document.getElementById('odakBtn').addEventListener('click', odakDegistir);
 const bitenGizleBtnEl = document.getElementById('bitenGizleBtn');
 function bitenGizleBtnCiz(){ bitenGizleBtnEl.classList.toggle('chip-aktif', bitenGizle); }
 bitenGizleBtnCiz();
@@ -1061,6 +1276,7 @@ bitenGizleBtnEl.addEventListener('click', () => {
   bitenGizle = !bitenGizle;
   try{ localStorage.setItem('adaptx_biten_gizle', bitenGizle ? '1' : '0'); }catch(e){}
   bitenGizleBtnCiz();
+  yiginBasaDon();
   if (lastData) render(lastData);
 });
 document.getElementById('yonBtn').addEventListener('click', () => {
@@ -1079,17 +1295,22 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('#temaKutu')) temaPanelAc(false);
 });
 document.addEventListener('keydown', (e) => {
-  const aktifTag = (document.activeElement && document.activeElement.tagName) || '';
-  if (e.key === '/' && !e.ctrlKey && !e.metaKey && aktifTag !== 'INPUT' && aktifTag !== 'TEXTAREA'){
+  const t = (document.activeElement && document.activeElement.tagName) || '';
+  const yaziyor = t === 'INPUT' || t === 'TEXTAREA';
+  if (e.key === '/' && !e.ctrlKey && !e.metaKey && !yaziyor){
     e.preventDefault();
     document.getElementById('aramaKutu').focus();
+  } else if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey && !yaziyor){
+    e.preventDefault();          /* modifier koruması tarayıcının Ctrl+F'ini bırakır */
+    odakDegistir();
   } else if (e.key === 'Escape'){
+    const temaAcikti = !document.getElementById('temaPanel').hidden;
     temaPanelAc(false);
     const kutu = document.getElementById('aramaKutu');
     if (document.activeElement === kutu && kutu.value){
       kutu.value = ''; arama = '';
       if (lastData) render(lastData);
-    }
+    } else if (!temaAcikti && odak){ odak = false; odakUygula(true); }
   }
 });
 document.getElementById('yenileBtn').addEventListener('click', () => yenile());
@@ -1098,6 +1319,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) yeni
 document.getElementById('altbilgi').textContent = 'kit-sistemi · ' + location.host;
 
 temaBaslat();
+odakUygula(false);
 setInterval(yenile, 30000);
 yenile();
 </script>

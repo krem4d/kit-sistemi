@@ -1,0 +1,27 @@
+--- SEÇİLİ PARÇA HACİM RAPORU (hacim_bul.py) ---
+Birim: yerel object-space hacmi (delikbulma.py ile aynı ölçek)
+
+============================================================
+OBJE: Object_4
+  KENDİ HACMİ: 583013.6311  [eşleşme yok]
+  DELİK HACİMLERİ: 6 adet (büyükten küçüğe):
+    Delik  1:    9775.8862  [linco]
+    Delik  2:    9656.8782  [linco]
+    Delik  3:     859.7632  [BİLİNMİYOR]
+    Delik  4:      80.8270  [BİLİNMİYOR]
+    Delik  5:      80.8266  [BİLİNMİYOR]
+    Delik  6:      80.8239  [BİLİNMİYOR]
+
+============================================================
+OBJE: Object_5
+  KENDİ HACMİ: 583013.6311  [eşleşme yok]
+  DELİK HACİMLERİ: 6 adet (büyükten küçüğe):
+    Delik  1:    9775.8863  [linco]
+    Delik  2:    9656.8782  [linco]
+    Delik  3:     859.7632  [BİLİNMİYOR]
+    Delik  4:      80.8270  [BİLİNMİYOR]
+    Delik  5:      80.8266  [BİLİNMİYOR]
+    Delik  6:      80.8239  [BİLİNMİYOR]
+
+İpucu: [BİLİNMİYOR] etiketli delik = yeni parça adayı (ör. menteşe tabanı).
+Bu değeri hacimler.md dosyasına işle.

@@ -71,6 +71,22 @@ kendiliğinden kaydedilir (`POST /api/not`); boş bırakmak notu siler. Notlar
 atomik yazım + bozuk dosyayı karantinaya alma) ve `/api/durum` yanıtında
 `not_metin`/`not_zaman` alanlarıyla gelir.
 
+**Parça sırası:** liste iki gruba ayrılır — önce **"Tartılarak sayılan"**
+(`Ağırlıklar.md`'de ağırlığı tanımlı parçalar: Raf Pimi, Linco Gövde/Kapak/Dübel,
+Minifix, Ağaç Vidası, Arkalık Çivisi), sonra **"Adetle sayılan"** (ray setleri
+dahil, "L Bağlantı Seti"nin hemen ardındaki yerlerini koruyarak). Grup *içinde*
+sıra PDF'inkiyle (`ROWS`) aynıdır, yani panel PDF'in yeniden sıralanmışı değil
+gruplanmışıdır. Grup kümesi `GRAM_KEY`'den türetilir (`TARTILAN`) — ayrı bir
+liste tutulmaz; `Ağırlıklar.md`'ye parça eklenirse `GRAM_KEY` güncellenmelidir
+(hem `panel.html` hem `pdf_uret.py`), yoksa satır yalnızca gramını değil doğru
+grubunu da kaybeder. Gram artık adetin yanında ayrı ve soluk gösterilir
+(`20` + `69,5 g`); eski `20 / 69,5` biçimi ve gram 0 iken oluşan sonu kopuk
+`115 / ` artığı kalktı. Parça işaretleme zamanı kısaltıldı (bugünse saat, eskiyse
+gün.ay; tam tarih `title`'da).
+
+Sıralamanın sunucuya etkisi yoktur: `panel.py`'deki `parca_anahtarlari()` bir
+sözlükten üyelik kümesi üretir, sıraya duyarlı değildir.
+
 Eski kayıtlar (`data/panel_checklist.json`) parça anahtarına göre saklanır;
 bir parça sonradan siparişten kalkarsa (miktar 0'a düşerse) o parçaya ait
 eski işaret sessizce yok sayılır, dosyadan silinmez.
@@ -86,9 +102,42 @@ JS'te hesaplanan left/right ofsetleri; `SERIT_W` sabiti CSS'teki şerit
 genişliğiyle eşleşmelidir). Şeride veya üstteki hızlı-git piline tıklamak
 o siparişi görünüme kaydırır; şeritlerin üzerinde fare tekerleği yatay
 kaydırır. `/` tuşu aramaya odaklanır; arama tek sonuca inince o sekmeye
-kendiliğinden kaydırılır. Üst bölüm (KPI/uyarı/araç çubuğu) bilinçli olarak
-kompakt tutulur — ana odak checklist yığınıdır; yığın yüksekliği görünür
-pencereye göre büyür (`calc(100vh - …)`).
+kendiliğinden kaydırılır.
+
+Sayfanın kendisi **kaydırmaz**: `body` bir uygulama kabuğudur
+(`height:100dvh; display:flex; overflow:hidden`), yığın kalan yüksekliği
+`flex:1` ile alır. Sihirli yükseklik sabiti (eski `calc(100vh - 235px)`) ve
+git-şeridinin `top:41px`'i bu yüzden kaldırıldı — üst bölüm büyüyüp küçülünce
+yığın kendiliğinden doğru boyda kalır. Kaydıran üç yer var: üst bölüm
+(`#ustBolum`), yığın (yatay) ve panel içi (dikey). **`main` içine eklenen her
+yeni bölüm ya `#ustBolum`'a konmalı ya da `flex:none` + kendi iç kaydırmasını
+taşımalı**, yoksa sessizce kırpılır.
+
+**Odak modu (`F` tuşu veya başlıktaki "Odak" butonu):** uyarı bandı, KPI
+kutuları, "Sistem detayı" ve hızlı-git şeridi gizlenir; başlık ve araç çubuğu
+kalır (arama/filtre erişimi kaybolmasın diye). Sekmeler boşalan ~230 pikseli
+kendiliğinden alır — 1080p'de yığın yüksekliği ~%27 artar. Sekme *genişliği*
+iki modda da aynıdır (`--sekme-w`); bu bilinçli: genişlik değişseydi her geçişte
+tüm panellerin yerleşimi yeniden hesaplanırdı, oysa şu an geçiş saf CSS.
+Seçim `localStorage`'da (`adaptx_odak`) saklanır. `Esc` sırası: önce tema
+paneli, sonra arama temizliği, en son odaktan çıkış.
+
+**Gösterilen sipariş sayısı:** varsayılan **son 50** (araç çubuğundaki seçiciyle
+50/100/200/Tümü; `localStorage`, `adaptx_pencere`). Bu yalnızca kaç sekmenin
+*çizileceğini* sınırlar — arama, filtreler ve tüm sayaçlar her zaman siparişlerin
+tamamı üzerinde çalışır, yani pencere dışında kalan eski bir sipariş aranınca
+bulunur ve kendiliğinden görünür. Araç çubuğundaki "111 içinden son 50" metni
+kırpma olduğunda vurgu renginde yanar. Sıra kritiktir: **filtrele → dilimle →
+yönü uygula**; böylece ↑/↓ yön düğmesi aynı 50 siparişi gösterir. "Son 50"
+sunucunun azalan sırasına dayanır (`panel.py`'deki `sorted(..., reverse=True)`).
+
+**Tipografi:** tüm yazı boyutları `:root`'taki `--fs-1…--fs-6` ölçeğinden gelir
+(12/13/15/17/19/22 px); dosyada çıplak `font-size:<sayı>px` yoktur. Parça satırı
+adı 17, miktarı 19 px'tir. Satır yüksekliğini yazı değil kontroller belirler
+(`--kontrol:26px` + checkbox `margin:0`), bu yüzden yazılar %20-35 büyürken satır
+47 px'ten 41 px'e *indi* — ekrana daha çok parça sığıyor. `--serit-w` (36px) JS'teki
+`SERIT_W` ile aynı olmak zorundadır; JS bu değeri artık CSS'ten okur, hiçbir tema
+bloğu bu değişkeni ezmemelidir.
 
 Sıralama: sipariş no'suna göre **azalan** — en büyük numara en başta (araç
 çubuğundaki ↑/↓ butonuyla yön değiştirilebilir). Aynı azalan sıralama özet

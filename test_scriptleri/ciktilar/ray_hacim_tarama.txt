@@ -1,0 +1,76 @@
+==============================================================================
+RAY DELİĞİ HACİM TARAMASI — çekmece yan duvarları
+==============================================================================
+Ölçüt: parçada TAM 2 linco deliği + 2-3 adet eşit hacimli linco-olmayan delik
+Kümeleme toleransı: %0.5   |   Birim: yerel mm³
+
+Sipariş   Parça           Delik    RAY ADAYI HACİM  Adet
+------------------------------------------------------------------------------
+9340-1    —                      (uygun parça yok)
+9340-2    —                      (uygun parça yok)
+9344-1    —                      (uygun parça yok)
+9344-2    —                      (uygun parça yok)
+9350-1    —                      (uygun parça yok)
+9350-2    —                      (uygun parça yok)
+9351-1    Object_28           5           936.9863     2
+9351-2    —                      (uygun parça yok)
+9351-3    —                      (uygun parça yok)
+9351-4    Object_19           8            84.9176     3
+9351-4    Object_19           8           936.8621     2
+9351-4    Object_20           8            84.9179     3
+9351-4    Object_20           8           937.0437     2
+9351-4    Object_21           8            84.9184     3
+9351-4    Object_21           8           936.8018     2
+9351-4    Object_22           8            84.9177     3
+9351-4    Object_22           8           936.8628     2
+9351-4    Object_23           8            84.9179     3
+9351-4    Object_23           8           937.0443     2
+9351-4    Object_24           8            84.9184     3
+9351-4    Object_24           8           936.8024     2
+9351-5    —                      (uygun parça yok)
+9351-6    Object_12           8            84.9176     3
+9351-6    Object_12           8           936.8622     2
+9351-6    Object_13           8            84.9188     3
+9351-6    Object_13           8           936.9833     2
+9351-6    Object_14           8            84.9174     3
+9351-6    Object_14           8           936.8621     2
+9351-6    Object_15           8            84.9177     3
+9351-6    Object_15           8           936.8628     2
+9351-6    Object_16           8            84.9189     3
+9351-6    Object_16           8           936.9838     2
+9351-6    Object_17           8            84.9175     3
+9351-6    Object_17           8           936.8627     2
+9352      —                      (uygun parça yok)
+9353      —                      (uygun parça yok)
+9355      —                      (uygun parça yok)
+9356      —                      (uygun parça yok)
+9359      —                      (uygun parça yok)
+9360-1    —                      (uygun parça yok)
+9360-2    —                      (uygun parça yok)
+9361      —                      (uygun parça yok)
+9362      —                      (uygun parça yok)
+9363      Object_4            6            80.8258     3
+9363      Object_5            6            80.8258     3
+9364-1    Object_18           8            84.9198     3
+9364-1    Object_18           8           937.1054     2
+9364-1    Object_19           8            84.9179     3
+9364-1    Object_19           8           937.1049     2
+9364-1    Object_20           8            84.9198     3
+9364-1    Object_20           8           937.1060     2
+9364-1    Object_21           8            84.9179     3
+9364-1    Object_21           8           937.1055     2
+9364-2    —                      (uygun parça yok)
+9372      —                      (uygun parça yok)
+9388      —                      (uygun parça yok)
+
+==============================================================================
+ÖZET — bulunan farklı hacim kümeleri
+==============================================================================
+       Hacim  Kaç parçada  Mevcut band [84.07, 85.77]   Siparişler
+------------------------------------------------------------------------------
+        80.8            2  ✗ KAÇIRILIYOR                9363
+        84.9           16  ✓ yakalanıyor                9351-4, 9351-6, 9364-1
+       936.8            2  ✗ KAÇIRILIYOR                9351-4
+       936.9            6  ✗ KAÇIRILIYOR                9351-4, 9351-6
+       937.0            5  ✗ KAÇIRILIYOR                9351-1, 9351-4, 9351-6
+       937.1            4  ✗ KAÇIRILIYOR                9364-1

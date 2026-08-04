@@ -35,3 +35,12 @@ __pycache__/
 
 # ── Ekran görüntüleri (lokal test) ───────────────────────────────────────────
 *.png
+
+# --- sırlar (2026-08-02 eklendi) ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+private-secrets/
