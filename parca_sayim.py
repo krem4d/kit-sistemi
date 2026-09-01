@@ -76,7 +76,12 @@ CATEGORIES = {
     "modulbaglanti": 351.35,
     "menteseTabani": 11454.0131,   # yeni_hacimler.md
 }
-TOLERANCE = 0.05           # %5 (güncel delikbulma.py ile aynı)
+TOLERANCE = 0.05           # %5 varsayılan (güncel delikbulma.py ile aynı)
+# Arkalık boşluğu üründen ürüne değiştiği için bazı deliklerin hacmi sallanıyor;
+# %5 global tolerans linco'da yanlış pozitif sayıma yol açıyordu. Linco artık %1'e
+# sabitlendi (hacimler.md'de zaten %1 olarak kayıtlı). Kategori-bazlı tolerans:
+# burada olmayanlar TOLERANCE'tan (%5) devralır.
+CATEGORY_TOL = {"linco": 0.03}   # linco = %3 (9680 merkez; arkalık boşluğu ürünler arası oynaklık yaratıyor, %1 gerçek delikleri dışarıda bırakıyordu; %3 hem 47 gerçeği yakalar hem 10053'lük sahteyi eler)
 KULP_DELIK_MESAFE = 0.192  # m — kulp deliği çifti arasındaki sabit mesafe (192 mm)
 KULP_DELIK_TOL = 0.05      # %5 tolerans (±~10 mm)
 
@@ -313,7 +318,8 @@ def execute_double_boolean(original_obj):
 
 def match_category(vol):
     for cat_name, target in CATEGORIES.items():
-        if target * (1 - TOLERANCE) <= vol <= target * (1 + TOLERANCE):
+        tol = CATEGORY_TOL.get(cat_name, TOLERANCE)
+        if target * (1 - tol) <= vol <= target * (1 + tol):
             return cat_name
     return None
 
