@@ -53,6 +53,14 @@ try:
 except Exception as _e:   # ayırıcı yoksa/bozuksa sayım yine çalışsın
     module_segmenter = sutunlar = None
     _MODUL_AYIRICI_HATA = repr(_e)
+# Askılık borusu boyu (karşılıklı flanş eşleştirme, saf Python). Yüklenemezse boru
+# ADEDİ yine flanş // 2 çıkar; yalnız boylar boş kalır ve JSON'da hata görünür.
+try:
+    import askilik
+    _ASKILIK_HATA = None
+except Exception as _e:
+    askilik = None
+    _ASKILIK_HATA = repr(_e)
 
 # ── Yol çözümü (proje dizini) ────────────────────────────────────────────────
 def _base_dir():
@@ -232,6 +240,11 @@ L_BAGLANTI_ADET = 2          # yedek: sipariş başına 2 L bağlantı seti (set
 FLANS_KENAR_TOL = 0.02       # kenar uzunlukları %2 toleransla eşit
 FLANS_ACI_LO = 59.0          # eşkenar üçgen açı alt sınırı (derece)
 FLANS_ACI_HI = 61.0          # eşkenar üçgen açı üst sınırı (derece)
+# Askılık borusu BOYU: karşılıklı flanş çiftinden (module_ayirici/askilik.py —
+# sabitler orada: ASKILIK_KESINTI_MM = 10, ASKILIK_HIZA_TOL_MM = 15). Boru ADEDİ
+# değişmedi: flanş // 2. Eşleşen çift sayısı bundan farklıysa JSON
+# "askilik_eslesme.tutarli" = false olur ve [UYARI] basılır.
+MODEL_MM = 1000.0            # model birimi → mm (kulp 0.192 ↔ 192 mm; RAY_SCALE_MM ile aynı)
 
 # ── Ray seti (RAY_DELIK_HACIMLERI bandındaki deliklerin ray deseninden tespiti) ──
 # Kalibrasyon: kulp deliği modelde 0.192 birim ↔ gerçek 192 mm → 1 birim = 1000 mm.
@@ -654,15 +667,16 @@ def _triangle_angles(a, b, c):
     return ang(a, b, c), ang(b, c, a), ang(c, a, b)
 
 
-def count_equilateral_flanges(centers):
+def find_equilateral_flanges(centers):
     """Ağaç vidası delik merkezlerinden eşkenar (~60°, kenarları %FLANS_KENAR_TOL
-    içinde eşit) üçgen oluşturan 3'lüleri say. Her delik en fazla bir üçgende
-    kullanılır (greedy). Her üçgen = 1 askılık flanşı."""
+    içinde eşit) üçgen oluşturan 3'lüleri bul. Her delik en fazla bir üçgende
+    kullanılır (greedy). Her üçgen = 1 askılık flanşı.
+    Returns: [(i, j, k), ...] — centers indeks üçlüleri (flanş konumu = ağırlık merkezi)."""
     n = len(centers)
     if n < 3:
-        return 0
+        return []
     used = [False] * n
-    flanges = 0
+    flanges = []
     for i, j, k in itertools.combinations(range(n), 3):
         if used[i] or used[j] or used[k]:
             continue
@@ -680,8 +694,23 @@ def count_equilateral_flanges(centers):
         if any(ang < FLANS_ACI_LO or ang > FLANS_ACI_HI for ang in angs):
             continue
         used[i] = used[j] = used[k] = True
-        flanges += 1
+        flanges.append((i, j, k))
     return flanges
+
+
+def count_equilateral_flanges(centers):
+    """find_equilateral_flanges'in yalnız adet döndüren kısayolu (teşhis/test için)."""
+    return len(find_equilateral_flanges(centers))
+
+
+def _dunya_kutusu_mm(obj):
+    """Objenin dünya-uzayı eksene hizalı kutusu, vertexlerden, mm: (lo, hi) listeleri."""
+    pts = [obj.matrix_world @ v.co for v in obj.data.vertices]
+    if not pts:
+        return None, None
+    lo = [min(p[i] for p in pts) * MODEL_MM for i in range(3)]
+    hi = [max(p[i] for p in pts) * MODEL_MM for i in range(3)]
+    return lo, hi
 
 
 def _ayak_dikdortgen_adaylari(centers):
@@ -1087,11 +1116,14 @@ def prepare_unique_parts(meshes):
 
 
 # ── Modül sütunları → duvar bağlantı braketi (L Bağlantı Seti) ───────────────
-def modul_sutun_bilgisi(meshes):
+def modul_sutun_bilgisi(meshes, parca_modul=None):
     """Modülleri geometriden ayır, sütunlara grupla, braket sayısını çıkar.
 
     prepare_unique_parts()'tan SONRA, delik boolean'larından ÖNCE çağrılır (dünya
     geometrisi el değmemiş olmalı). Parça adı kullanılmaz. Sahneyi değiştirmez.
+    parca_modul: dict verilirse ayırıcının üyelik ataması {obje adı: "M01"} ile
+    doldurulur (askılık flanş eşleştirmesi için; ad yalnız obje anahtarıdır).
+    Atanamayan parça sözlükte yer almaz.
     Dönüş (JSON'a "moduller" olarak yazılır):
       kaynak       "geometri" | "yedek_sabit"
       braket       L Bağlantı Seti adedi (geometri: 2 × sütun; yedek: L_BAGLANTI_ADET)
@@ -1115,6 +1147,8 @@ def modul_sutun_bilgisi(meshes):
     if not moduller:
         bilgi["hata"] = "hiç modül (gövde) bulunamadı"
         return bilgi
+    if parca_modul is not None:
+        parca_modul.update({ad: a["module"] for ad, a in sonuc["assignment"].items()})
     gruplar = sutunlar.sutunlari_bul(moduller)
     bilgi.update(
         kaynak="geometri",
@@ -1133,7 +1167,8 @@ def count_order(order):
     meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH']
     meshes, duplicate_parts = prepare_unique_parts(meshes)
     # Modül/sütun tespiti delik boolean'larından ÖNCE (geometri henüz el değmemiş).
-    modul_bilgisi = modul_sutun_bilgisi(meshes)
+    parca_modul = {}            # obje adı → modül (askılık flanş eşleştirmesi için)
+    modul_bilgisi = modul_sutun_bilgisi(meshes, parca_modul)
     if modul_bilgisi["kaynak"] != "geometri":
         print(f"  [UYARI] L Bağlantı Seti yedek sabite düştü: {modul_bilgisi.get('hata')}")
 
@@ -1145,6 +1180,7 @@ def count_order(order):
     linco_holes_by_part = []    # her parçanın linco delikleri: [(center, direction), ...]
     arkalik_civi = 0
     askilik_flansi = 0
+    flanslar = []               # askılık flanşı konumları: {merkez, pano, modul, pano_lo, pano_hi} (mm)
     ray_isimleri = []           # tespit edilen ray boyları (ör. "55cm", "30cm")
     part_count = len(meshes)
 
@@ -1229,8 +1265,17 @@ def count_order(order):
 
         if part_mentese > 0:
             parts_with_mentese += 1
-        # Askılık flanşı: kalan ağaç vidası deliklerinden eşkenar üçgenler
-        askilik_flansi += count_equilateral_flanges(remaining_agacvida)
+        # Askılık flanşı: kalan ağaç vidası deliklerinden eşkenar üçgenler. Her flanş
+        # konumunu (üçgen ağırlık merkezi) ve üstünde durduğu paneli saklar → boru boyu.
+        ucgenler = find_equilateral_flanges(remaining_agacvida)
+        askilik_flansi += len(ucgenler)
+        if ucgenler:
+            pano_lo, pano_hi = _dunya_kutusu_mm(o)
+            for i, j, k in ucgenler:
+                m = (remaining_agacvida[i] + remaining_agacvida[j] + remaining_agacvida[k]) / 3.0
+                flanslar.append({"merkez": [m.x * MODEL_MM, m.y * MODEL_MM, m.z * MODEL_MM],
+                                 "pano": o.name, "modul": parca_modul.get(o.name),
+                                 "pano_lo": pano_lo, "pano_hi": pano_hi})
 
         # Uzun linco pimi için: bu parçanın linco delik/yön çiftlerini sakla
         if part_linco_holes:
@@ -1268,7 +1313,23 @@ def count_order(order):
     # Ağaç vidası = doğrudan hacimden sayılan delik sayısı + her L bağlantı seti
     # için 2 adet − ray'lerde kullanılan delik sayısı.
     agac_vidasi = counts["agacvidasi"] + 2 * l_baglanti - ray_delik_toplam
-    askilik_borusu = askilik_flansi // 2     # her 2 flanşı için 1 boru
+    askilik_borusu = askilik_flansi // 2     # her 2 flanşı için 1 boru (adet anlamı DEĞİŞMEDİ)
+    # Boru boyları: aynı modülde X/Y boyunca birbirine bakan flanş çiftleri →
+    # iç yüz orta noktaları arası mesafe − 1 cm, tam cm (module_ayirici/askilik.py).
+    if askilik is not None:
+        askilik_borulari, eslesmeyen_flanslar = askilik.eslestir(flanslar)
+        askilik_eslesme = askilik.ozet(askilik_borulari, eslesmeyen_flanslar, askilik_flansi)
+    else:
+        askilik_borulari = []
+        askilik_eslesme = {"flans": askilik_flansi, "eslesen_boru": 0,
+                           "beklenen_boru": askilik_borusu, "tutarli": askilik_flansi == 0,
+                           "eslesmeyen_flanslar": [],
+                           "hata": f"askilik.py yüklenemedi: {_ASKILIK_HATA}"}
+    if not askilik_eslesme["tutarli"]:
+        print(f"  [UYARI] Askılık: {askilik_flansi} flanş → adet {askilik_borusu} boru, "
+              f"ama {askilik_eslesme['eslesen_boru']} çift eşleşti "
+              f"({len(askilik_eslesme['eslesmeyen_flanslar'])} flanş eşsiz); "
+              f"boyu bulunamayan boru PDF'te '?'")
     ray_adet = len(ray_isimleri)             # tespit edilen tekil ray sayısı
     ray_counter = Counter(ray_isimleri)      # boya göre tekil ray sayısı
     # Aynı boydaki 2 ray (sol+sağ) = 1 set. Boy bazında set adedi (ör. {"55cm": 2}).
@@ -1318,6 +1379,8 @@ def count_order(order):
         "ray_setleri": ray_setleri,    # boy bazında ray seti adedi (ör. {"55cm": 2})
         "renk": siparis_rengi_belirle(order),  # None = renk json henüz yüklenmemiş
         "moduller": modul_bilgisi,     # modül/sütun tespiti; L Bağlantı Seti buradan
+        "askilik_borulari": askilik_borulari,  # boru başına kesim boyu (uzunluk_cm), büyükten küçüğe
+        "askilik_eslesme": askilik_eslesme,    # flanş/çift tutarlılığı + eşsiz flanşlar (teşhis)
         "_ham": dict(counts),          # doğrulama için (linco==pim beklenir)
         "_kulp": kulp,
         "_raylar": ray_isimleri,       # tespit edilen ray boyları (doğrulama için)
@@ -1370,6 +1433,9 @@ def main():
         mb = res["moduller"]
         print(f"   [modül] {mb['modul_sayisi']} modül, {mb['sutun_sayisi']} sütun "
               f"→ L Bağlantı Seti {mb['braket']} ({mb['kaynak']})")
+        if res["askilik_borulari"] or res["adet"]["Askılık Flanşı"]:
+            print(f"   [askılık] boylar (cm): {[b['uzunluk_cm'] for b in res['askilik_borulari']]} "
+                  f"tutarlı={res['askilik_eslesme']['tutarli']}")
         print(f"   >> {out_path}")
 
     _save_manifest(manifest)

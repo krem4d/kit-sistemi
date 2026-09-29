@@ -212,8 +212,40 @@ uygular. Kaynak türleri:
 - Sabitler `parca_sayim.py`: `FLANS_KENAR_TOL=0.02`, `FLANS_ACI_LO/HI=59/61`.
 
 ### Askılık borusu
-- **Kaynak:** türetme (askılık flanşından).
-- **Kural:** **her 2 askılık flanşı için 1 boru** → `askılık flanşı // 2`.
+- **Kaynak:** adet türetme (askılık flanşından), boy geometri (karşılıklı flanş çifti).
+- **Adet (değişmedi):** **her 2 askılık flanşı için 1 boru** → `askılık flanşı // 2`.
+- **Boy kuralı (Kerem, 2026-09-29):** Her flanş, eşkenar üçgeninin **ağırlık merkezi**
+  (dünya, mm) ve üstünde durduğu **panel** ile saklanır. İki flanş **birbirine bakar**
+  (= 1 boru) ⇔ (1) farklı panellerde ve **aynı modülde** (modül üyeliği
+  `module_segmenter.segment()` ataması; parça adı anlamı kullanılmaz, modülü
+  bilinmeyen flanş eşleşmez), (2) iki panelin de normali (bbox ince ekseni) aynı eksen,
+  **X ya da Y**, (3) merkezler diğer iki koordinatta `ASKILIK_HIZA_TOL_MM` = **15 mm**
+  içinde, (4) paneller o eksende ayrık ve her flanş kendi panelinin öbür panele bakan
+  (iç) yüzünde. Adaylar iç yüzler arası eksen boşluğu küçükten büyüğe greedy eşlenir,
+  her flanş bir kez (duvar | bölme | duvar dizisinde doğru komşu).
+  - **Boy** = iki panelin **iç yüzlerinin orta noktaları** arası **Öklid** mesafesi
+    − `ASKILIK_KESINTI_MM` (**1 cm**), sonra **tam cm'ye yarım-yukarı** yuvarlanır
+    (`math.floor(x + 0.5)`; Python `round` 64.5'i 64 yapar, kullanılmaz).
+    Ör. 700 mm gövde, 18 mm duvarlar: 664 − 10 = 654 mm → **65 cm**.
+  - Paneller farklı boy/derinlikteyse yüz merkezleri kayar ve Öklid mesafesi eksen
+    boşluğundan uzun çıkar — kural bilerek böyle (Kerem); korpus raporu bunları listeler.
+- **Tutarlılık:** eşleşen çift sayısı `flanş // 2`'den farklıysa (ya da eşsiz flanş
+  kaldıysa) adet YİNE `flanş // 2`; JSON `askilik_eslesme.tutarli = false`, eşsiz
+  flanşlar nedeniyle (`karsi_flans_yok` / `modul_yok`) listelenir, `[UYARI]` basılır.
+  PDF'te boyu bulunamayan boru `?` olur.
+- **JSON:** `askilik_borulari` = `[{uzunluk_cm, modul, eksen, ham_mm, eksen_boslugu_mm,
+  flanslar, panolar}]` (büyükten küçüğe); `askilik_eslesme` = `{flans, eslesen_boru,
+  beklenen_boru, tutarli, eslesmeyen_flanslar}`.
+- **PDF:** "Askılık Borusu" hücresi `2 (96, 66 cm)`; aynı boy tekrarında `3 (2×96, 66 cm)`,
+  boyu bilinmeyen `?`. Boy başına satır açılmaz (boylar siparişten siparişe çok
+  değişir, özet tablo şişerdi). Eski (alan içermeyen) JSON'larda hücre düz adettir.
+- **Bilinen FBX eksiği:** bazı siparişlerde flanş vida delikleri yalnız bir duvarda
+  modellenmiş (ör. 9259-2: sol duvarda 2 flanş, sağ duvarda hiç delik yok; FBX'te 2
+  boru mesh'i var). Bu siparişlerde hem adet (flanş // 2) eksik çıkar hem boy bulunamaz.
+- Kod: `module_ayirici/askilik.py` (saf Python; `eslestir`, `boru_boyu_cm`,
+  `pdf_hucre_metni`), `parca_sayim.find_equilateral_flanges`. Testler:
+  `python3 tests/test_askilik.py`, Blender `tests/test_askilik_blender.py`, korpus
+  `tests/askilik_korpus.py` + `tests/askilik_korpus_karsilastir.py`.
 
 ### L Bağlantı Seti (duvar bağlantı braketi)
 - **Kural (Kerem, 2026-09-29):** **2 × modül sütunu** (set + vidası + dübeli tek satırda).
@@ -304,7 +336,7 @@ uygular. Kaynak türleri:
 | Parça | Öngörülen kural | Durum |
 |-------|-----------------|-------|
 | Askılık flanşı | eşkenar üçgen tespiti (yukarıda) | ✅ entegre |
-| Askılık borusu | flanşı/2 (yukarıda) | ✅ entegre |
+| Askılık borusu | adet flanşı/2, boy karşılıklı flanş çiftinden (yukarıda) | ✅ entegre |
 | Ray (Set) | ağaç vidası deliği deseni + kalibrasyon (yukarıda) | ✅ entegre |
 | L Bağlantı Seti | 2 × modül sütunu, geometriden (yukarıda) | ✅ entegre |
 | L Modül Uzun Linco Pimi | birbirine dayalı linco çifti (~43 mm, yukarıda) | ✅ entegre |

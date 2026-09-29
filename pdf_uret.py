@@ -17,10 +17,20 @@ import os
 import re
 import glob
 import json
+import sys
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.textpath import TextPath
+
+# Askılık borusu hücre metni module_ayirici/askilik.py'de (saf Python, test edilir).
+# Yüklenemezse hücre eski düz adede düşer — PDF üretimi durmaz.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "module_ayirici"))
+try:
+    import askilik
+except Exception:
+    askilik = None
 
 # Veri klasörü: ADAPTX_BASE (Docker/servis) varsa onu kullan, yoksa scriptin dizini.
 # Statik yollar → her makineye/CT'ye uyum (parca_sayim.py ile aynı mantık).
@@ -66,6 +76,15 @@ ROWS = [
 # Ray Seti satırları buradan SONRA (boy bazında dinamik) eklenir.
 RAY_INSERT_AFTER = "L Bağlantı Seti"
 
+# Askılık Borusu hücresi adet + kesim boyları: "2 (96, 66 cm)", "3 (2×96, 66 cm)";
+# boyu bulunamayan boru "?" (JSON askilik_borulari). Boylar siparişten siparişe
+# çok değiştiği için Ray Seti gibi boy başına satır açılmaz (özet tablo şişerdi).
+# Bu anahtar olmayan eski JSON'larda hücre eskisi gibi düz adettir.
+ASKILIK_BORUSU_KEY = "Askılık Borusu"
+# Özet tabloda dar sütuna sığmayan boru hücresinin yazısı küçültülür (en az bu punto).
+HUCRE_MIN_PUNTO = 4.5
+HUCRE_DOLULUK = 0.90         # yazı, sütun genişliğinin en fazla bu oranını kaplasın
+
 # ağırlıklı satır (adet anahtarı) → JSON gram anahtarı
 GRAM_KEY = {
     "Raf Pimi": "Raf Pimi",
@@ -96,6 +115,9 @@ def cell_value(d, key):
     # Sipariş Rengi satırı: renk json henüz yüklenmemişse boş (fmt(None)'la aynı davranış)
     if key == "__renk__":
         return (d.get("renk") or {}).get("siparis_rengi") or ""
+    # Askılık Borusu: adet + kesim boyları (boy listesi yoksa eski düz adet)
+    if key == ASKILIK_BORUSU_KEY and askilik is not None and "askilik_borulari" in d:
+        return askilik.pdf_hucre_metni(d["adet"].get(key), d.get("askilik_borulari"))
     s = fmt(d["adet"].get(key))
     if s == "":          # adet 0/None → hücre tamamen boş ("/ gram" da yazma)
         return ""
@@ -192,8 +214,9 @@ def load_orders():
 def _draw_table(ax, order_keys, data, fontsize):
     ax.axis("off")
     col_labels = ["Parça"] + [str(k) for k in order_keys]
+    row_defs = build_rows(order_keys, data)
     cell_rows = [[disp] + [cell_value(data[k], key) for k in order_keys]
-                 for disp, key in build_rows(order_keys, data)]
+                 for disp, key in row_defs]
 
     tbl = ax.table(cellText=cell_rows, colLabels=col_labels,
                    cellLoc="center", bbox=[0, 0, 1, 1])
@@ -216,6 +239,22 @@ def _draw_table(ax, order_keys, data, fontsize):
                 cell.set_text_props(fontweight="bold")
             elif r % 2 == 0:
                 cell.set_facecolor("#f4f7f9")
+
+    # Askılık Borusu hücresi boy listesiyle uzayabilir: sütuna sığmıyorsa yazıyı
+    # küçült (yalnız bu satır; diğer hücrelerin görünümü değişmez).
+    col_pt = ax.get_position().width * ax.figure.get_figwidth() * 72 * wrest
+    for r, (disp, key) in enumerate(row_defs, start=1):
+        if key != ASKILIK_BORUSU_KEY:
+            continue
+        for c in range(1, ncol):
+            metin = cell_rows[r - 1][c]
+            if not metin:
+                continue
+            # yazının gerçek genişliği (punto), varsayılan yazı tipiyle ölçülür
+            gerekli = TextPath((0, 0), metin, size=fontsize).get_extents().width
+            if gerekli > col_pt * HUCRE_DOLULUK:
+                punto = max(HUCRE_MIN_PUNTO, fontsize * col_pt * HUCRE_DOLULUK / gerekli)
+                tbl[r, c].get_text().set_fontsize(punto)
 
 
 def render_order(path, k, data):

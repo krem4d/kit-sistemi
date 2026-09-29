@@ -128,7 +128,22 @@ Each cavity's volume is matched to a category (`match_category`) within `TOLERAN
   (`detect_rays`, `RAY_GAPS`); 2 same-length rails = 1 set.
 - **Ağaç Vidası** = (non-ray wood-screw holes) + 4 × L bağlantı seti.
 - **Askılık Flanşı** = equilateral (~60°, ±2% sides) triangles of wood-screw holes
-  (`count_equilateral_flanges`); **Askılık Borusu** = flanşı // 2.
+  (`find_equilateral_flanges`; each flange keeps its triangle centroid + the board it
+  sits on); **Askılık Borusu** count = flanşı // 2 (unchanged).
+  **Rod length** (Kerem, 2026-09-29) — `module_ayirici/askilik.py` (pure Python):
+  two flanges face each other iff different boards, same module (segmenter
+  `assignment`, passed out via `modul_sutun_bilgisi(meshes, parca_modul)`), both
+  boards' normal = the same axis X or Y, centroids aligned in the other two coords
+  within `ASKILIK_HIZA_TOL_MM`=15, boards disjoint on that axis and each flange on its
+  board's inner face; greedy by smallest inner gap. Length = Euclidean distance
+  between the two boards' inner-face midpoints − `ASKILIK_KESINTI_MM` (10 mm), rounded
+  half-up to whole cm (`floor(x+0.5)`, not `round`). JSON: `askilik_borulari` (per
+  rod) + `askilik_eslesme` (consistency; unpaired flanges with reason). Count is never
+  changed by pairing; a mismatch sets `tutarli=false` + prints `[UYARI]`, and the PDF
+  shows `?` for rods without a length. PDF cell: `2 (96, 66 cm)`. Known FBX gap: some
+  orders model the flange screw holes on one wall only (e.g. 9259-2). Tests:
+  `python3 tests/test_askilik.py`, Blender `tests/test_askilik_blender.py`, corpus
+  `tests/askilik_korpus.py` + `tests/askilik_korpus_karsilastir.py`.
 - **L Bağlantı Seti** (wall bracket) = **2 × module columns** (Kerem, 2026-09-29).
   `count_order` → `modul_sutun_bilgisi()` runs `module_ayirici/module_segmenter.segment()`
   right after `prepare_unique_parts()` (before any boolean), then
