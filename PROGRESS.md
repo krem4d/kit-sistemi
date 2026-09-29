@@ -15,7 +15,7 @@ Güncel durum takibi. Ayrıntı için `PLAN.md`, `parca_kurallari.md`, `hacimler
 - [x] **Ayarlı ayak = orijinal kural** (parçada TAM 4 ağaç vidası → 1; `//4` hatası düzeltildi)
 - [x] **PDF A4** + sayfa başına **14 sipariş** (7 yan yana + altına 7); >14 → `siparisler_ozet_2.pdf`
 - [x] **Gram menüsü kaldırıldı**; ağırlıklı parçalar hücrede `adet / gram`
-- [x] **Ağaç vidası kalibrasyonu**: `ahsapcivisi=19.48`, `TOLERANCE=%5` (güncel delikbulma.py)
+- [x] **Ağaç vidası kalibrasyonu**: `agacvidasi=19.48`, `TOLERANCE=%5` (güncel delikbulma.py)
 - [x] **Ayarlı Ayak fix doğrulandı** (8990 → Object_5'te tam 4 → 1 ayak)
 - [x] **L Bağlantı Seti = 2** (sabit); **Ağaç Vidası = türetme** (4×ayak+4×menteşe+4×L+3×askılık)
 - [x] 21 sipariş işlendi; özet 14/sayfa → `siparisler_ozet.pdf` + `_2.pdf`

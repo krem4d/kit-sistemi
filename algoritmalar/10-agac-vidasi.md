@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Kod** | `count_order()` satır 918-919 (sayım), 950-951, 976-979 (türetme) |
-| **Girdi** | `ahsapcivisi` hacim havuzu (14.57 mm³, %5) |
+| **Girdi** | `agacvidasi` hacim havuzu (14.57 mm³, %5) |
 | **Ürettiği parça** | Ağaç Vidası |
 | **Doğruluk** | 🔴 10 siparişte **−90** (438 / 528) — ikinci en büyük sapma |
 
@@ -21,24 +21,24 @@ delik sayısına eşit değil — bazı vidalar delik gerektirmeyen yerlere de g
 
 ```
 1. Delik sınıflandırma:                                    :918-919
-     cat == "ahsapcivisi"  →  part_ahsap_centers.append(merkez)
+     cat == "agacvidasi"  →  part_agacvida_centers.append(merkez)
 
 2. Panel bitince — ayak ayıklaması (havuzdan DÜŞMEZ):      :941, 950-951
-     ayak, ayak_noktalari, ayak_disi = extract_ayak_feet(part_ahsap_centers)
-     remaining_ahsap = ayak_noktalari + ayak_disi     ← hepsi geri birleşiyor
-     counts["ahsapcivisi"] += len(remaining_ahsap)
+     ayak, ayak_noktalari, ayak_disi = extract_ayak_feet(part_agacvida_centers)
+     remaining_agacvida = ayak_noktalari + ayak_disi     ← hepsi geri birleşiyor
+     counts["agacvidasi"] += len(remaining_agacvida)
 
 3. Türetme:                                                :976-979
      ray_delik_toplam = Σ len(RAY_HOLE_POSITIONS[boy])  for boy in ray_isimleri
 
-     agac_vidasi = counts["ahsapcivisi"]        # sayılan tüm vida delikleri
+     agac_vidasi = counts["agacvidasi"]        # sayılan tüm vida delikleri
                  + 4 * l_baglanti               # L bağlantı başına 4 vida (= +8)
                  − ray_delik_toplam             # ray deliklerini düş   ⚠️
 ```
 
 | Terim | Değer | Gerekçe |
 |---|---|---|
-| `counts["ahsapcivisi"]` | ölçülen | Panellerde bulunan vida delikleri (ayak dahil) |
+| `counts["agacvidasi"]` | ölçülen | Panellerde bulunan vida delikleri (ayak dahil) |
 | `+ 4 × 2` | +8 | Her L bağlantı seti 4 vida kullanır, set sayısı sabit 2 |
 | `− ray_delik_toplam` | değişken | Ray vidaları ray setiyle birlikte geliyor sayılıyor |
 
@@ -48,18 +48,18 @@ delik sayısına eşit değil — bazı vidalar delik gerektirmeyen yerlere de g
 
 Kodun kendi yorumu (satır 973-976) şöyle diyor:
 
-> *"Ray'lerde kullanılan delik sayısı (RAY_DELIK_HACIM havuzundan, **ahsapcivisi
+> *"Ray'lerde kullanılan delik sayısı (RAY_DELIK_HACIM havuzundan, **agacvidasi
 > havuzuna hiç girmedi** — ama ray varsa o rayların delikleri de birer vidayla
 > kapatıldığından, genel ağaç vidası adedinden düşülür)."*
 
 Bu yorumun iki yarısı **birbiriyle çelişiyor**:
 
-1. Ray delikleri `ahsapcivisi` havuzuna **hiç girmedi** — doğru. Ray delikleri
+1. Ray delikleri `agacvidasi` havuzuna **hiç girmedi** — doğru. Ray delikleri
    `RAY_DELIK_HACIM` (84.92 mm³) bandında, `match_category()` onları `None`
-   döndürüyor, ayrı havuza gidiyorlar (satır 928-931). `counts["ahsapcivisi"]`
+   döndürüyor, ayrı havuza gidiyorlar (satır 928-931). `counts["agacvidasi"]`
    içinde **hiç yoklar**.
 
-2. Ama sonra o sayı `counts["ahsapcivisi"]`'den **çıkarılıyor**.
+2. Ama sonra o sayı `counts["agacvidasi"]`'den **çıkarılıyor**.
 
 Havuza hiç girmemiş bir sayıyı havuzdan çıkarmak, **gerçek ağaç vidalarını siler**.
 
@@ -83,9 +83,9 @@ farkın bir kısmı buradan geliyor. Ray bulunmayan siparişlerde `ray_delik_top
 olduğu için etkisiz — bu yüzden fark tutarsız görünüyor.
 
 > **Bu bir varsayım değil, koddan doğrulanabilir bir tutarsızlık.** Ray havuzunun
-> `ahsapcivisi`'nden ayrılması sonradan yapılan bir düzeltmeydi (bkz.
+> `agacvidasi`'nden ayrılması sonradan yapılan bir düzeltmeydi (bkz.
 > [11-ray-seti.md](11-ray-seti.md)); bu çıkarma satırı **eski durumdan kalmış**
-> olmalı — o zaman ray delikleri gerçekten `ahsapcivisi` havuzundaydı ve çıkarma
+> olmalı — o zaman ray delikleri gerçekten `agacvidasi` havuzundaydı ve çıkarma
 > doğruydu.
 
 ---
@@ -94,7 +94,7 @@ olduğu için etkisiz — bu yüzden fark tutarsız görünüyor.
 
 | Sabit | Değer | Nerede |
 |---|---|---|
-| `ahsapcivisi` hacmi | 14.57 mm³ | satır 74 |
+| `agacvidasi` hacmi | 14.57 mm³ | satır 74 |
 | `TOLERANCE` | %5 | satır 79 |
 | `L_BAGLANTI_ADET` | 2 | satır 156 |
 | L başına vida | 4 (koda gömülü) | satır 979 |

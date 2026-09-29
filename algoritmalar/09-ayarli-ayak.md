@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Kod** | `_ayak_dikdortgen_adaylari()` — satır 582-626<br>`extract_ayak_feet()` — satır 629-655<br>`count_ayak_feet()` — satır 658-661 (teşhis kısayolu) |
-| **Girdi** | Parça bazında `ahsapcivisi` delik merkezleri (14.57 mm³, %5) |
+| **Girdi** | Parça bazında `agacvidasi` delik merkezleri (14.57 mm³, %5) |
 | **Ürettiği parçalar** | Ayarlı Ayak, Allen, Tıpa |
 | **Doğruluk** | 🟡 10 siparişte Ayak **−2**, Tıpa **−2**, Allen **0*** |
 
@@ -50,7 +50,7 @@ Kullanılan geometri teoremi:
 Bu, sıralı-mesafe listesinin aksine topolojiyi doğrudan kullanır.
 
 ```
-Girdi: bir paneldeki ahsapcivisi delik merkezleri
+Girdi: bir paneldeki agacvidasi delik merkezleri
 
 ── 1. ADAY KÖŞEGENLER ────────────────────────────────  :601-607
    Her (i,j) ikilisi için:
@@ -102,11 +102,11 @@ return feet, ayak_noktalari, ayak_disi                     # :655
 Üç değer döner ama `count_order` şunu yapıyor:
 
 ```python
-ayak_bu_parca, ayak_noktalari, ayak_disi = extract_ayak_feet(part_ahsap_centers)
+ayak_bu_parca, ayak_noktalari, ayak_disi = extract_ayak_feet(part_agacvida_centers)
 ayak += ayak_bu_parca
 ...
-remaining_ahsap = ayak_noktalari + ayak_disi               # :950  ← HEPSİ geri birleşiyor
-counts["ahsapcivisi"] += len(remaining_ahsap)              # :951
+remaining_agacvida = ayak_noktalari + ayak_disi               # :950  ← HEPSİ geri birleşiyor
+counts["agacvidasi"] += len(remaining_agacvida)              # :951
 ```
 
 Yani **ayak vidaları ağaç vidası havuzundan DÜŞMÜYOR** — ayrılıp hemen geri

@@ -1,0 +1,37 @@
+======================================================================
+TESHIS RAPORU — 2026-09-01 16:06:12
+======================================================================
+Blender    : 5.2.0 LTS
+Python     : 3.14.7
+blend yolu : (KAYDEDİLMEMİŞ)
+__file__   : /BLENDER_CALISTIR.py.002
+mod        : OBJECT
+
+-- Blender icindeki METIN datablock'lari --
+  'BLENDER_CALISTIR.py'  satir=135  kaynak=/home/rocket/Jupiter/Projects/otonom_kit/test_scriptleri/BLENDER_CALISTIR.py  degismis=True
+  'BLENDER_CALISTIR.py.001'  satir=135  kaynak=/home/rocket/Jupiter/Projects/otonom_kit/test_scriptleri/BLENDER_CALISTIR.py  degismis=True
+  'BLENDER_CALISTIR.py.002'  satir=140  kaynak=/home/rocket/Jupiter/Projects/otonom_kit/test_scriptleri/BLENDER_CALISTIR.py  degismis=True
+  'Text'  satir=135  kaynak=YAPISTIRILMIS (diske bagli DEGIL)  degismis=True
+  'Text.001'  satir=1  kaynak=YAPISTIRILMIS (diske bagli DEGIL)  degismis=True
+
+-- Sahne -- mesh: 12, secili mesh: 12
+ * Object_6                         scale=(1.0000,1.0000,1.0000) vertex=2062
+ * Object_35                        scale=(1.0000,1.0000,1.0000) vertex=7905
+ * Object_34                        scale=(1.0000,1.0000,1.0000) vertex=7909
+ * Object_22                        scale=(1.0000,1.0000,1.0000) vertex=2680
+ * Object_25                        scale=(1.0000,1.0000,1.0000) vertex=2680
+ * Object_24                        scale=(1.0000,1.0000,1.0000) vertex=2680
+ * Object_5                         scale=(1.0000,1.0000,1.0000) vertex=2062
+ * Object_21                        scale=(1.0000,1.0000,1.0000) vertex=2680
+ * Object_11                        scale=(1.0000,1.0000,1.0000) vertex=2062
+ * Object_20                        scale=(1.0000,1.0000,1.0000) vertex=2680
+ * Object_23                        scale=(1.0000,1.0000,1.0000) vertex=2680
+ * Object_10                        scale=(1.0000,1.0000,1.0000) vertex=2062
+
+-- test_scriptleri dizini: /home/rocket/Jupiter/Projects/otonom_kit/test_scriptleri --
+  agac_vidasi_empty.py bulundu: 17180 bayt, degisim=2026-09-01 15:50:12
+
+-- Arac calistiriliyor --
+  >> Arac HATASIZ tamamlandi.
+  >> Sahnedeki toplam EMPTY: 75
+  >> AGAC_VIDASI_TESHIS koleksiyonu: 74 obje

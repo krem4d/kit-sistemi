@@ -15,7 +15,7 @@ Bu doküman `parca_sayim.py` içindeki iki iç içe geçmiş mekanizmayı anlat�
 
 Normal şartlarda `count_order()` sahnedeki her mesh parçasını çift-boolean
 (`execute_double_boolean`) ile içindeki **deliklere** ayırıp, her deliğin
-hacmine bakarak kategori (ahşap vidası, linco, modül bağlantı, kulp vidası...)
+hacmine bakarak kategori (ağaç vidası, linco, modül bağlantı, kulp vidası...)
 belirler. Yani normal bir parça "delik deliğine" parçalanıp incelenir.
 
 Arkalık paneli (dolabın arka MDF'i) bu işlemden **muaf tutulur** — hiç

@@ -67,12 +67,12 @@ Sıra **önemlidir** — bazı algoritmalar bir öncekinin havuzundan artakalan�
 2. Her kalın panel için:
    ├─ [01] Çift-boolean ile delikleri çıkar
    ├─ [01] Her deliği hacmine göre sınıflandır
-   │       linco / pim / ahsapcivisi / rafpimi / modulbaglanti / menteseTabani / ray
+   │       linco / pim / agacvidasi / rafpimi / modulbaglanti / menteseTabani / ray
    ├─ [07] modulbaglanti havuzundan KULP çiftlerini ayır
    │       └─ artakalan → global modül bağlantı havuzuna
-   ├─ [09] ahsapcivisi havuzundan AYAK dikdörtgenlerini ayıkla
+   ├─ [09] agacvidasi havuzundan AYAK dikdörtgenlerini ayıkla
    ├─ [11] ray havuzunda RAY desenlerini ara
-   └─ [12] ahsapcivisi havuzunda EŞKENAR ÜÇGEN (flanş) ara
+   └─ [12] agacvidasi havuzunda EŞKENAR ÜÇGEN (flanş) ara
 
 3. Tüm parçalar bittikten sonra (global):
    ├─ [08] modül bağlantı çiftleri (parçalar arası)
@@ -88,8 +88,8 @@ Aynı deliğin iki kez sayılmaması için havuzlar ayrılmıştır:
 | Havuz | Kim tüketir | Not |
 |---|---|---|
 | `modulbaglanti` | önce **kulp**, artakalan **modül bağlantı** | Kulp önce gelir |
-| `ahsapcivisi` | **ayak**, **flanş** — ama havuzdan DÜŞMEZ | Ayak vidaları ağaç vidası olarak da sayılır |
-| `RAY_DELIK_HACIM` | sadece **ray** | `ahsapcivisi` ile kesişmez (bilerek) |
+| `agacvidasi` | **ayak**, **flanş** — ama havuzdan DÜŞMEZ | Ayak vidaları ağaç vidası olarak da sayılır |
+| `RAY_DELIK_HACIM` | sadece **ray** | `agacvidasi` ile kesişmez (bilerek) |
 | `linco` | **linco ailesi** + **uzun pim** | Uzun pim sadece dübeli azaltır |
 
 Ray havuzunun ayrılması tarihsel bir düzeltmedir — bkz. [11-ray-seti.md](11-ray-seti.md).

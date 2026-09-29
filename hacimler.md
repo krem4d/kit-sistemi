@@ -17,7 +17,7 @@ tutar. Sayım motoru (Faz 1+) bir deliğin/parçanın hangi parça olduğunu bu 
 |-------|---------------|--------|-------------|----------|-------|
 | Linco (Gövde/Kapak/Dübel/Minifix kaynağı) | `linco` | delik | 9680.0 | %1 | ✅ |
 | Linco Dübel | `pim` | delik | 936.0 | %1 | ✅ (linco'dan türetilir; çapraz kontrol) |
-| Ağaç vidası | `ahsapcivisi` | delik | 14.57 | %5 | ✅ (gerçek FBX ölçümü) |
+| Ağaç vidası | `agacvidasi` | delik | 14.57 | %5 | ✅ (gerçek FBX ölçümü) |
 | Raf pimi | `rafpimi` | delik | 234.0 | %1 | ✅ |
 | Modül bağlantı aparatı | `modulbaglanti` | delik (A–B çift) | 351.35 | %1 | ✅ |
 
@@ -35,7 +35,13 @@ tutar. Sayım motoru (Faz 1+) bir deliğin/parçanın hangi parça olduğunu bu 
 
 Bu iki değer `parca_sayim.py` içindeki `CATEGORIES`/`KULP_VOL`'a işlendi.
 
-> ✅ **Ağaç vidası (ahsapcivisi):** delik hacmi `parca_sayim.py`'de **14.57**, `%5` tolerans.
+> ✅ **Ağaç vidası — SABİT OLAN KESİT, HACİM DEĞİL (2026-09-01):** deliğin çapı sabit
+> (2.46 mm, kesit ≈ **4.627 mm²**) ama derinliği üründen ürüne değişir → hacim de değişir.
+> Üç tanıma yolu: standart kör delik **14.57 %5** (`agacvidasi`), karşıya çıkan delik
+> **83.2121 %1** (`agacvidasiTam`; %1 katı — iki ray bandının tam arasında), ve değişken
+> derinlikli kör delik: hacim/derinlik ≈ 4.627 ±%1.5 + yanal bbox ≈ 2.46 ±%5
+> (`agac_vidasi_degisken_mi`, bkz. parca_kurallari.md → Ağaç vidası).
+> ✅ **Ağaç vidası (agacvidasi):** delik hacmi `parca_sayim.py`'de **14.57**, `%5` tolerans.
 > Ayak tespiti artık delik SAYISINA değil, 4 vidanın oluşturduğu **~32×40 mm dikdörtgene**
 > dayanır (bkz. parca_kurallari.md → Ayarlı ayak; `count_ayak_feet`).
 > Not: Ağaç vidası KİT ADEDİ ise türetmeyle hesaplanır (bkz. parca_kurallari.md), delik
@@ -51,6 +57,6 @@ Bu parçaların hacimleri ileride, ilgili karar/entegrasyon netleşince ölçül
 |-------|--------------------|-------------|-------|
 | Askılık flanşı | delik | — | ⛔ ertelendi |
 | Askılık borusu | delik/dummy | — | ⛔ ertelendi |
-| Ray (Set) | kendine özgü delik deseni (kalibrasyon 1 birim=1000 mm) | `RAY_DELIK_HACIM` ≈ 84.92 (ahsapcivisi=14.57'den FARKLI — bkz. hacim_bul_raporu.txt) | ✅ entegre (detect_rays) |
+| Ray (Set) | kendine özgü delik deseni (kalibrasyon 1 birim=1000 mm) | `RAY_DELIK_HACIM` ≈ 84.92 (agacvidasi=14.57'den FARKLI — bkz. hacim_bul_raporu.txt) | ✅ entegre (detect_rays) |
 | L Bağlantı seti / vidası / dübeli | Mert ile karar | — | ⛔ ertelendi |
 | L Modül Uzun Linco Pimi | iki parçadaki birbirine dayalı linco çifti (~43 mm) | `linco` = 9680 | ✅ entegre (detect_long_linco_pins) |

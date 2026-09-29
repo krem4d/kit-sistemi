@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Kod** | `count_equilateral_flanges()` — satır 552-579<br>`_triangle_angles()` — satır 543-549 |
-| **Girdi** | Parça bazında **tüm** `ahsapcivisi` merkezleri (ayak vidaları dahil) |
+| **Girdi** | Parça bazında **tüm** `agacvidasi` merkezleri (ayak vidaları dahil) |
 | **Ürettiği parçalar** | Askılık Flanşı, Askılık Borusu |
 | **Doğruluk** | ✅ 10 siparişte **tam tutuyor** (Flanş 2/2, Boru 1/1) |
 
@@ -23,7 +23,7 @@ vidalar arasında **eşkenar üçgen** arıyoruz.
 ## Algoritma
 
 ```
-Girdi: bir paneldeki tüm ahsapcivisi merkezleri
+Girdi: bir paneldeki tüm agacvidasi merkezleri
 
 n < 3  →  0 dön                                            :556-557
 
@@ -100,12 +100,12 @@ Gerçek veri (9364-1): flanş 2 → boru 1. Referans BoM aynı. ✅
 
 ## Havuz etkileşimi
 
-Flanş araması `remaining_ahsap` üzerinde çalışıyor (satır 956) — bu,
+Flanş araması `remaining_agacvida` üzerinde çalışıyor (satır 956) — bu,
 [09 — Ayarlı Ayak](09-ayarli-ayak.md)'ta ayrılıp geri birleştirilen **tam liste**:
 
 ```python
-remaining_ahsap = ayak_noktalari + ayak_disi               # :950
-askilik_flansi += count_equilateral_flanges(remaining_ahsap)   # :956
+remaining_agacvida = ayak_noktalari + ayak_disi               # :950
+askilik_flansi += count_equilateral_flanges(remaining_agacvida)   # :956
 ```
 
 Yani **ayak vidaları da flanş aramasına giriyor**. Pratikte sorun değil: ayağın 4

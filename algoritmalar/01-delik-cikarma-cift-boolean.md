@@ -88,7 +88,7 @@ Basit bağıl aralık kontrolü. İlk uyan kategori döner (sözlük sırası).
 |---|---|---|---|
 | `linco` | 9680.0 | %5 | Linco gövde deliği |
 | `pim` | 936.0 | %5 | Linco dübel deliği (çapraz kontrol) |
-| `ahsapcivisi` | 14.57 | %5 | Ağaç vidası deliği |
+| `agacvidasi` | 14.57 | %5 | Ağaç vidası deliği |
 | `rafpimi` | 234.0 | %5 | Raf pimi deliği |
 | `modulbaglanti` | 351.35 | %5 | Modül bağlantı **veya kulp** deliği |
 | `menteseTabani` | 11454.0131 | %5 | Menteşe tabanı yuvası |
@@ -118,7 +118,7 @@ her delik için:
   cat = match_category(hacim)
 
   cat == "modulbaglanti"  → part_modul_centers    [07][08]
-  cat == "ahsapcivisi"    → part_ahsap_centers    [09][10][12]
+  cat == "agacvidasi"    → part_agacvida_centers    [09][10][12]
   cat == "linco"          → counts["linco"]++ ve part_linco_holes  [05][06]
   cat == başka bir şey    → counts[cat]++         [03][04]
   cat is None + is_ray_hole(hacim) → part_ray_centers  [11]

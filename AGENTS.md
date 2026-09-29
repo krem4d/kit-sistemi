@@ -102,7 +102,7 @@ For each mesh part, cavities (drilled holes) are extracted with a **double boole
 Each cavity's volume is matched to a category (`match_category`) within `TOLERANCE`.
 
 ### 4c. Volume categories (`CATEGORIES`, model units = mm³)
-`linco`=9680, `pim`=936 (linco dübel hole), `ahsapcivisi`=14.57 (wood screw),
+`linco`=9680, `pim`=936 (linco dübel hole), `agacvidasi`=14.57 (wood screw),
 `rafpimi`=234, `modulbaglanti`=351.35, `menteseTabani`=11454.0131. `TOLERANCE`=0.05 (±5%).
 
 ### 4d. Calibration (critical)
@@ -276,3 +276,21 @@ runs it in the GUI → analyze the report → then build/adjust the pipeline rul
 
 When picking up deferred work, read `Eksikler.md` and `parca_kurallari.md` together, and
 prefer the diagnostic-first workflow in §7 before hardcoding a new rule.
+
+## Duplicate-part preparation (2026-09-08)
+
+`count_order()` starts with `prepare_unique_parts()`, before back-panel pairing or hole
+booleans. Origins move to local geometry bounding-box centers without moving world
+geometry or children; coincident duplicates are then removed from the working scene.
+Position/vertex distance tolerance is `min(max_world_extent_A, max_world_extent_B) *
+0.0001` (0.01%). World center, vertex positions and edge/face connectivity must agree.
+Different geometry at the same origin is preserved. Modifier/shape-key objects and
+meshes with different tessellation are conservatively preserved. Source FBX files
+and existing JSON/PDF outputs are not rewritten. Diagnostic `agac_vidasi_empty.py`
+uses the same preparation on its scan set and reports removed/retained names.
+Its Empties are children of the meshes they mark. An explicit parent inverse preserves
+their world position and scale, and `AGAC_VIDASI_TESHIS` still provides collection-level
+visibility control.
+
+Regression check (separate background process; resets its scene):
+`ALSOFT_DRIVERS=null blender --background --factory-startup --python-exit-code 1 --python tests/test_duplicate_parts.py`

@@ -1,12 +1,12 @@
 """
 ray_seti_empty.py — SEÇİLİ parçadaki ray desenlerini (parca_sayim.detect_rays ile
-AYNI mantık) bulur ve HER ray setinin ahşap çivisi deliklerine, ray adı/uzunluğu
+AYNI mantık) bulur ve HER ray setinin ağaç vidası deliklerine, ray adı/uzunluğu
 yazılı Empty koyar.
 
 AMAÇ (Algoritmaların_testi.md): Ray seti algoritması bazen yanlış uzunluk buluyor
 (ör. gerçekte 55cm olması gereken bir ray, 25cm olarak bulunuyor). Bunu debug
 etmek için: şu anki ray-bulma algoritmasını AYNEN kullanan bu geçici script,
-tespit ettiği her ray setinin ahşap çivisi deliklerine, o ray setinin adını
+tespit ettiği her ray setinin ağaç vidası deliklerine, o ray setinin adını
 (dolayısıyla algoritmanın bulduğu cm karşılığını) yazan Empty'ler koyar. Böylece
 viewport'ta o delikleri görüp `iki_obje_mesafe.py` ile aralarındaki GERÇEK
 mesafeleri ölçüp algoritmanın hangi adımda yanlış eşleştiğini bulabilirsin.
@@ -15,13 +15,13 @@ KULLANIM (GUI):
     1) Viewport'ta parçayı SEÇ (bir veya birden çok mesh seçebilirsin).
     2) Scripting sekmesinde bu dosyayı çalıştır.
     3) Ray setine dahil edilen HER deliğe bir Empty gelir (ray adı adında);
-       ray dışı kalan ahşap çivilerine de ayrı bir Empty gelir (karşılaştırma için).
+       ray dışı kalan ağaç vidalarına de ayrı bir Empty gelir (karşılaştırma için).
        Konsolda: parça başına bulunan ray listesi + her rayın delikleri arası
        ÖLÇÜLEN ham mesafeler (mm).
 
 ÇIKTI:
     - Ray'e dahil delik:     "ray_<Parca>_<RayAdi>#<k>_<i>"   (küre, kırmızımsı boyut)
-    - Ray dışı ahşap çivisi: "ahsapdisi_<Parca>#<i>_<hacim>mm3"
+    - Ray dışı ağaç vidası: "vidadisi_<Parca>#<i>_<hacim>mm3"
     - Konsolda: her ray için kullanılan delik indeksleri ve aralarındaki ham
       mesafeler (mm) — RAY_GAPS tablosundaki beklenen değerlerle kıyaslamak için.
 
@@ -35,7 +35,7 @@ import bmesh
 import mathutils
 import itertools
 
-# ── Ahşap çivisi "vida sınıfı" hacim bandı (mm^3) ────────────────────────────
+# ── Ağaç vidası "vida sınıfı" hacim bandı (mm^3) ────────────────────────────
 VOL_LO = 8.0
 VOL_HI = 25.0
 
@@ -226,12 +226,12 @@ def main():
             bpy.data.objects.remove(h["object"], do_unlink=True)
 
         if not centers:
-            print(f"  {o.name}: ahşap çivisi yok, atlandı.")
+            print(f"  {o.name}: ağaç vidası yok, atlandı.")
             continue
 
         rays, kalan_idx = detect_rays_debug(centers)
 
-        print(f"\n  --- {o.name}: {len(centers)} ahşap çivisi, {len(rays)} ray bulundu ---")
+        print(f"\n  --- {o.name}: {len(centers)} ağaç vidası, {len(rays)} ray bulundu ---")
         for k, (name, idxs, dists) in enumerate(rays):
             dist_str = ", ".join(f"{d:.1f}mm" for d in dists)
             print(f"    Ray#{k} -> '{name}'  delikler={idxs}  ham_mesafeler=[{dist_str}]")
@@ -240,11 +240,11 @@ def main():
             toplam_ray += 1
 
         for i in kalan_idx:
-            add_empty(f"ahsapdisi_{_safe(o.name)}#{i}", centers[i], EMPTY_BOYUT_DISI)
+            add_empty(f"vidadisi_{_safe(o.name)}#{i}", centers[i], EMPTY_BOYUT_DISI)
             toplam_disi += 1
 
     print(f"\n>> Toplam {toplam_ray} ray seti Empty grubu ('ray_' önekiyle) ve "
-          f"{toplam_disi} ray-dışı ahşap çivisi Empty'si ('ahsapdisi_' önekiyle) kondu.")
+          f"{toplam_disi} ray-dışı ağaç vidası Empty'si ('vidadisi_' önekiyle) kondu.")
     print("   Şüpheli ray'in deliklerini seçip iki_obje_mesafe.py ile gerçek mesafeyi ölç,")
     print("   sonra konsoldaki 'ham_mesafeler' ile RAY_GAPS tablosundaki beklenen değeri kıyasla.")
 

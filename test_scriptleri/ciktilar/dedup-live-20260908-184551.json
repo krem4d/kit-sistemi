@@ -1,0 +1,13 @@
+{
+  "backup": "/home/rocket/Jupiter/Projects/otonom_kit/test_scriptleri/ciktilar/before-dedup-20260908-184551.blend",
+  "before_meshes": 32,
+  "after_meshes": 32,
+  "removed": [],
+  "real_mesh_clone_test": [
+    [
+      "ZZ_DEDUP_TEST",
+      "Object_6"
+    ]
+  ],
+  "max_world_vertex_displacement_m": 1.3657139822709083e-07
+}

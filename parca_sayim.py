@@ -71,17 +71,23 @@ MANIFEST = os.path.join(BASE, "islem_gecmisi.json")
 CATEGORIES = {
     "linco": 9680.0,
     "pim": 936.0,             # Linco Dübel deliği (linco'ya eşit; çapraz kontrol)
-    "ahsapcivisi": 14.57,     # Ağaç vidası (gerçek FBX ölçümü: ~14.57)
+    "agacvidasi": 14.57,     # Ağaç vidası standart kör delik (gerçek FBX ölçümü: ~14.57)
+    "agacvidasiTam": 83.2121, # Ağaç vidası KARŞIYA ÇIKAN delik: 18mm panel × sabit kesit
+                               # 4.6229 mm² (bkz. AGAC_VIDA_KESIT_MM2). Aynı havuza girer.
     "rafpimi": 234.0,
     "modulbaglanti": 351.35,
     "menteseTabani": 11454.0131,   # yeni_hacimler.md
+    "tipa": 1392.7481,        # Tıpa (ayarlı ayak deliği; gerçek FBX ölçümü ~1392.75, %1 tol)
 }
 TOLERANCE = 0.05           # %5 varsayılan (güncel delikbulma.py ile aynı)
 # Arkalık boşluğu üründen ürüne değiştiği için bazı deliklerin hacmi sallanıyor;
 # %5 global tolerans linco'da yanlış pozitif sayıma yol açıyordu. Linco artık %1'e
 # sabitlendi (hacimler.md'de zaten %1 olarak kayıtlı). Kategori-bazlı tolerans:
 # burada olmayanlar TOLERANCE'tan (%5) devralır.
-CATEGORY_TOL = {"linco": 0.03}   # linco = %3 (9680 merkez; arkalık boşluğu ürünler arası oynaklık yaratıyor, %1 gerçek delikleri dışarıda bırakıyordu; %3 hem 47 gerçeği yakalar hem 10053'lük sahteyi eler)
+CATEGORY_TOL = {"linco": 0.03,   # linco = %3 (9680 merkez; arkalık boşluğu ürünler arası oynaklık yaratıyor, %1 gerçek delikleri dışarıda bırakıyordu; %3 hem 47 gerçeği yakalar hem 10053'lük sahteyi eler)
+                "tipa": 0.01,    # tipa = %1 (tekil ölçüm, kendi deliği; kullanıcı ölçümü tutarlı, tolerans yeter de artar)
+                "agacvidasiTam": 0.01}  # %1 → [82.38, 84.04]; iki ray bandının ([80.02, 81.63] / [84.07, 85.76])
+                                         # TAM ARASINA sıkışıyor, genişletme — bandlara değerse ray/vida karışır
 KULP_DELIK_MESAFE = 0.192  # m — kulp deliği çifti arasındaki sabit mesafe (192 mm)
 KULP_DELIK_TOL = 0.05      # %5 tolerans (±~10 mm)
 
@@ -94,14 +100,14 @@ KULP_DELIK_TOL = 0.05      # %5 tolerans (±~10 mm)
 MODUL_BAGLANTI_MESAFE = 0.018   # m — modül bağlantı deliği çifti arası sabit mesafe (18 mm)
 MODUL_BAGLANTI_TOL = 0.001      # %0.1 tolerans
 
-# ── Ray deliği hacmi (ahşap vidasından FARKLI, kendine özgü delik) ───────────
+# ── Ray deliği hacmi (ağaç vidasından FARKLI, kendine özgü delik) ───────────
 # Keşif (test_scriptleri/olcumler/hacim_bul_raporu.txt, Object_23): ray'e ait delikler CATEGORIES'teki
 # hiçbir hacimle eşleşmiyor ([BİLİNMİYOR]) — 3 delik: 84.9189 / 84.9188 / 84.9175.
-# Bu, ahsapcivisi (14.57) ile AYNI delik DEĞİL, kendine özgü bir hacim. Eskiden
-# detect_rays() ahsapcivisi (gerçek ağaç vidası) havuzunda arıyordu; bu yüzden
+# Bu, agacvidasi (14.57) ile AYNI delik DEĞİL, kendine özgü bir hacim. Eskiden
+# detect_rays() agacvidasi (gerçek ağaç vidası) havuzunda arıyordu; bu yüzden
 # rastgele aralıklı gerçek vidalar ray desenine tesadüfen uyup yanlış ray sanılıyordu
 # (ör. gerçek 55cm ray'in 25cm bulunması). Ray'ler artık SADECE bu kendine özgü
-# hacim bandındaki deliklerden aranır — ahşap vidası/ayarlı ayak havuzuna DOKUNMAZ.
+# hacim bandındaki deliklerden aranır — ağaç vidası/ayarlı ayak havuzuna DOKUNMAZ.
 # Güncel ölçüm (son hacim raporu): 84.9186 / 84.9185 / 84.9172 → ortalama 84.9181.
 #
 # İKİ AYRI HACİM VAR (2026-07-29, test_scriptleri/ray_hacim_tarama.py ile 26 FBX tarandı):
@@ -118,6 +124,27 @@ MODUL_BAGLANTI_TOL = 0.001      # %0.1 tolerans
 # hiçbir hacimle de (en yakını rafpimi 234) kesişmiyor.
 RAY_DELIK_HACIMLERI = [84.9181, 80.8258]  # bilinen ray deliği hacimleri (mm³)
 RAY_DELIK_TOL = 0.01       # %1 (tekil ölçüm, linco/pim gibi hassas delik tipi)
+
+# ── Ağaç vidası: değişken derinlikli kör delik — sabit olan KESİT ────────────
+# Ağaç vidası deliğinde üründen ürüne değişmeyen şey hacim değil KESİT alanıdır:
+# çap sabit (2.46 mm), derinlik ürüne göre değişir → hacim de değişir. Karşıya
+# çıkan delik 18mm panelde sabit 83.2121 mm³ (CATEGORIES → agacvidasiTam); kör
+# delik ise her hacimde gelebilir ve hacim bandıyla YAKALANAMAZ. Kör delik,
+# boolean boşluğunun bbox'undan tanınır: boşluk objesi parçanın LOKAL ekseninde
+# durduğundan iki yanal bbox kenarı ≈ çap, üçüncü kenar = derinlik, ve
+# hacim/derinlik ≈ sabit kesit. Ray-cast gerekmez.
+# Ölçümler (2026-09-01, 'delik bulma.blend' test sahnesi, pipeline boolean'ı ile):
+#   kör örnek 13.83 mm³ / 2.988 mm derinlik → 4.629 mm²; karşıya çıkan
+#   83.2121/18 → 4.6229; delik ağzı kapak yüzeyi → 4.632. Çap her ölçümde 2.46.
+# Dairesellik için ayrıca RANSAC gerekmez: iki yanal kenarın d×d çıkması + kesit
+# denetimi birlikte A/d² ≈ 0.765 oranını (16-gen silindir) zorlar; kare kanal
+# (A/d²=1.0) ya da eşkenar-dörtgen profil (0.5) iki denetimden birine takılır.
+AGAC_VIDA_KESIT_MM2 = 4.627    # delik kesit alanı (mm²) = hacim/derinlik, sabit
+AGAC_VIDA_KESIT_TOL = 0.015    # ±%1.5 — gerçek yayılım ±%0.2; ray kesiti (84.92/18≈4.718) DIŞARIDA kalsın
+AGAC_VIDA_CAP_MM = 2.46        # delik çapı (mm) — boşluk bbox'unun iki yanal kenarı
+AGAC_VIDA_CAP_TOL = 0.05       # ±%5
+AGAC_VIDA_DERINLIK_MIN_MM = 1.0   # bundan sığ boşluk = boolean kırıntısı sayılır
+AGAC_VIDA_DERINLIK_MAX_MM = 40.0  # panel kalınlığı üstü sağduyu sınırı
 
 # ── Uzun linco pimi (iki parçadaki birbirine dayalı linco delikleri) ──────────
 # İki AYRI modülün birbirine dayanan linco gövde delikleri arasına normal linco
@@ -182,7 +209,7 @@ FLANS_ACI_HI = 61.0          # eşkenar üçgen açı üst sınırı (derece)
 
 # ── Ray seti (RAY_DELIK_HACIMLERI bandındaki deliklerin ray deseninden tespiti) ──
 # Kalibrasyon: kulp deliği modelde 0.192 birim ↔ gerçek 192 mm → 1 birim = 1000 mm.
-# Ray delikleri ahşap vidasıyla AYNI delik DEĞİL (bkz. RAY_DELIK_HACIMLERI); parçadaki
+# Ray delikleri ağaç vidasıyla AYNI delik DEĞİL (bkz. RAY_DELIK_HACIMLERI); parçadaki
 # RAY_DELIK_HACIMLERI bandına giren delikler arasından doğrusal + ardışık aralıkları bir
 # ray boyunun imzasına (aşağıdaki RAY_GAPS) uyanlar = 1 ray. İmzalar, kullanıcının
 # referans-noktasına göre ölçtüğü delik KONUMLARINDAN (RAY_HOLE_POSITIONS) türetilir.
@@ -209,7 +236,7 @@ RAY_HOLE_POSITIONS = {
 RAY_GAPS = {name: [round(pos[i + 1] - pos[i], 1) for i in range(len(pos) - 1)]
             for name, pos in RAY_HOLE_POSITIONS.items()}
 
-# ── Ayarlı ayak (4 ahşap çivisi = sabit dikdörtgen) ──────────────────────────
+# ── Ayarlı ayak (4 ağaç vidası = sabit dikdörtgen) ──────────────────────────
 # Ölçüm (test_scriptleri/olcumler/iki_obje_mesafe_raporu.txt, Object_55): ayağın 4 vida deliği, kenarları ~32 ve ~40 mm,
 # köşegeni ~51.22 mm olan bir DİKDÖRTGEN oluşturur (4 delik hep aynı mesafelerde).
 # Bir parçadaki ağaç vidası delikleri arasından bu dikdörtgeni oluşturan 4'lü = 1 ayak.
@@ -232,7 +259,7 @@ _AYAK_DIAG_MM = math.hypot(AYAK_KENAR_A_MM, AYAK_KENAR_B_MM)   # 51.22 mm
 # ── Birim ağırlıklar (gram) — Ağırlıklar.md ──────────────────────────────────
 WEIGHTS = {
     "rafpimi": 2.7,
-    "ahsapcivisi": 1.108,
+    "agacvidasi": 1.108,
     "minifix": 3.401,
     "lincodubel": 4.4,
     "linco": 4.631,
@@ -327,11 +354,39 @@ def match_category(vol):
 def is_ray_hole(vol):
     """Delik hacmi bilinen ray deliği hacimlerinden birinin bandında mı?
 
-    Ray deliği ahsapcivisi ile AYNI delik DEĞİL (bkz. RAY_DELIK_HACIMLERI).
+    Ray deliği agacvidasi ile AYNI delik DEĞİL (bkz. RAY_DELIK_HACIMLERI).
     Modellerde iki farklı geometri var, bu yüzden tek değer değil liste kontrol edilir.
     """
     for hacim in RAY_DELIK_HACIMLERI:
         if hacim * (1 - RAY_DELIK_TOL) <= vol <= hacim * (1 + RAY_DELIK_TOL):
+            return True
+    return False
+
+
+def agac_vidasi_degisken_mi(hole_obj, vol):
+    """Bilinen kategorilere uymayan boşluk, değişken derinlikli ağaç vidası deliği mi?
+
+    is_ray_hole()'dan SONRA çağrılmalı: bilinen ray hacim bandları (±%1) önce
+    ayıklanır, bu kural kalanlara bakar. (Bilinen sınır durumu: 18mm panelde
+    ~17.4mm derinlikli kör vida hacmi 80.83 ray bandına düşer ve ray sanılır;
+    bilinen modellerde bu derinlik yok — çıkarsa bandları geometriyle ayrıştır.)
+    """
+    dim, _ = get_perfect_local_bounds(hole_obj)
+    if dim is None:
+        return False
+    kenar = (dim.x, dim.y, dim.z)
+    cap_lo = AGAC_VIDA_CAP_MM * (1 - AGAC_VIDA_CAP_TOL)
+    cap_hi = AGAC_VIDA_CAP_MM * (1 + AGAC_VIDA_CAP_TOL)
+    for i in range(3):
+        yanal = [kenar[j] for j in range(3) if j != i]
+        if not all(cap_lo <= y <= cap_hi for y in yanal):
+            continue
+        derinlik = kenar[i]
+        if not (AGAC_VIDA_DERINLIK_MIN_MM <= derinlik <= AGAC_VIDA_DERINLIK_MAX_MM):
+            continue
+        kesit = vol / derinlik
+        if (AGAC_VIDA_KESIT_MM2 * (1 - AGAC_VIDA_KESIT_TOL) <= kesit
+                <= AGAC_VIDA_KESIT_MM2 * (1 + AGAC_VIDA_KESIT_TOL)):
             return True
     return False
 
@@ -529,7 +584,7 @@ def detect_rays(centers):
     aranır. Her eşleşme = 1 çekmece rayı. Her delik en fazla bir ray'de kullanılır
     (greedy). Returns (ray_isimleri:list, kalan_merkezler:list).
 
-    Not: Bu havuz ahsapcivisi/ayarlı ayak havuzuyla KESİŞMEZ (bkz. RAY_DELIK_HACIMLERI),
+    Not: Bu havuz agacvidasi/ayarlı ayak havuzuyla KESİŞMEZ (bkz. RAY_DELIK_HACIMLERI),
     dolayısıyla ray tespiti ağaç vidası/ayak sayımını hiç etkilemez."""
     n = len(centers)
     used = [False] * n
@@ -655,7 +710,7 @@ def extract_ayak_feet(centers):
     4'lüleri ayıklar (bkz. _ayak_dikdortgen_adaylari). En iyi uyan dikdörtgen önce
     (greedy); her delik en fazla bir ayakta kullanılır. Her dikdörtgen = 1 ayarlı ayak.
 
-    ÖNEMLİ — bu ayıklama detect_rays()'DEN ÖNCE, HAM ahsapcivisi listesi üzerinde
+    ÖNEMLİ — bu ayıklama detect_rays()'DEN ÖNCE, HAM agacvidasi listesi üzerinde
     çağrılmalı (detect_kulp_pairs'in modulbaglanti listesini ray'den/başka bir şeyden
     önce ayırması gibi). Gerçek veri teşhisinde (9304-2/Object_18) görüldü: bir ayak
     köşesi, ray deseni önce çalıştırılırsa YANLIŞLIKLA 'ray' sanılıp havuzdan
@@ -888,9 +943,127 @@ def prep_import(fbx_path):
     return order
 
 
+# Konum/geometri mesafesi: küçük parçanın en büyük dünya boyutunun on binde biri.
+DUPLICATE_POSITION_RATIO = 0.0001
+
+
+def _center_part_origin(obj):
+    """Orijini geometri bbox merkezine al; dünya geometrisi ve çocuklar sabit kalır."""
+    dim, center = get_perfect_local_bounds(obj)
+    if center is None or center.length < 1e-12:
+        return
+    children = [(c, c.matrix_world.copy()) for c in obj.children]
+    if obj.data.users > 1:
+        obj.data = obj.data.copy()
+    obj.data.transform(mathutils.Matrix.Translation(-center))
+    obj.matrix_world = obj.matrix_world @ mathutils.Matrix.Translation(center)
+    for child, matrix in children:
+        child.matrix_world = matrix
+
+
+def _part_geometry(obj):
+    points = [obj.matrix_world @ v.co for v in obj.data.vertices]
+    if not points:
+        return None
+    lo = mathutils.Vector(tuple(min(v[i] for v in points) for i in range(3)))
+    hi = mathutils.Vector(tuple(max(v[i] for v in points) for i in range(3)))
+    return points, (lo + hi) / 2, hi - lo
+
+
+def _same_part_geometry(a, b, tolerance):
+    """Dünya vertexleri VE yüz/kenar bağlantıları eşleşmeli; yalnız bbox yetmez.
+
+    Yeniden üçgenlenmiş eş yüzeyler konservatif olarak ayrı kalır.
+    Modifier/shape-key geometrisi bu statik FBX yolunda birleştirilmez.
+    """
+    oa, pa = a
+    ob, pb = b
+    if (len(pa) != len(pb) or len(oa.data.edges) != len(ob.data.edges)
+            or len(oa.data.polygons) != len(ob.data.polygons)):
+        return False
+    if all((va - vb).length <= tolerance for va, vb in zip(pa, pb)):
+        mapping = list(range(len(pb)))
+    else:
+        from mathutils.kdtree import KDTree
+        tree = KDTree(len(pa))
+        for i, point in enumerate(pa):
+            tree.insert(point, i)
+        tree.balance()
+        mapping, used = [], set()
+        for point in pb:
+            choices = sorted(tree.find_range(point, tolerance), key=lambda item: (item[2], item[1]))
+            index = next((i for _, i, _ in choices if i not in used), None)
+            if index is None:
+                return False
+            mapping.append(index)
+            used.add(index)
+
+    def face_key(indices):
+        seq = tuple(indices)
+        # Başlangıç vertexi ve yüz sarım yönü farklı olabilir.
+        rotations = [seq[i:] + seq[:i] for i in range(len(seq))]
+        rev = seq[::-1]
+        rotations.extend(rev[i:] + rev[:i] for i in range(len(rev)))
+        return min(rotations)
+
+    edges_a = Counter(tuple(sorted(e.vertices)) for e in oa.data.edges)
+    edges_b = Counter(tuple(sorted(mapping[i] for i in e.vertices)) for e in ob.data.edges)
+    if edges_a != edges_b:
+        return False
+    return (Counter(face_key(p.vertices) for p in oa.data.polygons)
+            == Counter(face_key([mapping[i] for i in p.vertices]) for p in ob.data.polygons))
+
+
+def prepare_unique_parts(meshes):
+    """Orijinleri düzelt, sonra üst üste eş parçaların tek temsilcisini bırak.
+
+    Tolerans = min(iki parçanın en büyük dünya boyutu) × 0.0001.
+    Dünya sıfırına uzaklığa bağlı değildir. Çıkış: (kalan objeler, kaldırılan/kalan adları).
+    Sadece verilen mesh'ler karşılaştırılır; kaynak FBX dosyasına yazılmaz.
+    """
+    meshes = sorted(meshes, key=lambda o: o.name)
+    bpy.context.view_layer.update()
+    for obj in meshes:
+        if not obj.modifiers and not obj.data.shape_keys:
+            _center_part_origin(obj)
+    bpy.context.view_layer.update()
+    kept, records, removed = [], [], []
+    for obj in meshes:
+        geometry = _part_geometry(obj)
+        if geometry is None or obj.modifiers or obj.data.shape_keys:
+            kept.append(obj)
+            continue
+        points, center, size = geometry
+        duplicate = None
+        for other, other_points, other_center, other_size in records:
+            tolerance = min(max(size), max(other_size)) * DUPLICATE_POSITION_RATIO
+            if tolerance <= 0 or (center - other_center).length > tolerance:
+                continue
+            if any(abs(size[i] - other_size[i]) > 2 * tolerance for i in range(3)):
+                continue
+            if _same_part_geometry((other, other_points), (obj, points), tolerance):
+                duplicate = other
+                break
+        if duplicate is None:
+            kept.append(obj)
+            records.append((obj, points, center, size))
+        else:
+            removed.append((obj.name, duplicate.name))
+            # Kopyaya bağlı yardımcıları silme; dünya dönüşümlerini koru.
+            for child in list(obj.children):
+                matrix = child.matrix_world.copy()
+                child.parent = duplicate
+                child.matrix_world = matrix
+            bpy.data.objects.remove(obj, do_unlink=True)
+    for name, kept_name in removed:
+        print(f"  [KOPYA] {name} kaldırıldı; kalan: {kept_name}")
+    return kept, removed
+
+
 # ── Sayım ────────────────────────────────────────────────────────────────────
 def count_order(order):
     meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH']
+    meshes, duplicate_parts = prepare_unique_parts(meshes)
 
     counts = Counter()          # ham kategori sayıları
     kulp = 0
@@ -929,7 +1102,7 @@ def count_order(order):
             continue
 
         part_mentese = 0
-        part_ahsap_centers = []
+        part_agacvida_centers = []
         part_modul_centers = []
         part_linco_holes = []
         part_ray_centers = []
@@ -939,8 +1112,11 @@ def count_order(order):
             cat = match_category(v)
             if cat == "modulbaglanti":
                 part_modul_centers.append(world_center(obj_part))
-            elif cat == "ahsapcivisi":
-                part_ahsap_centers.append(world_center(obj_part))
+            elif cat in ("agacvidasi", "agacvidasiTam"):
+                # agacvidasiTam = karşıya çıkan ağaç vidası deliği; aynı havuz
+                if cat == "agacvidasiTam":
+                    counts["_agacvida_tam"] += 1        # teşhis (JSON _ham)
+                part_agacvida_centers.append(world_center(obj_part))
             elif cat == "linco":
                 counts["linco"] += 1
                 part_linco_holes.append(
@@ -950,9 +1126,14 @@ def count_order(order):
                 if cat == "menteseTabani":
                     part_mentese += 1
             elif is_ray_hole(v):
-                # ray'e özgü delik (ahsapcivisi DEĞİL, bkz. RAY_DELIK_HACIMLERI) — ray
-                # deseni bu havuzda aranır, ahşap vidası/ayarlı ayak havuzuna girmez.
+                # ray'e özgü delik (agacvidasi DEĞİL, bkz. RAY_DELIK_HACIMLERI) — ray
+                # deseni bu havuzda aranır, ağaç vidası/ayarlı ayak havuzuna girmez.
                 part_ray_centers.append(world_center(obj_part))
+            elif agac_vidasi_degisken_mi(obj_part, v):
+                # değişken derinlikli kör ağaç vidası deliği (hacim bandı yok;
+                # sabit KESİT üzerinden tanındı) — agacvidasi havuzuna girer
+                counts["_agacvida_degisken"] += 1       # teşhis (JSON _ham)
+                part_agacvida_centers.append(world_center(obj_part))
             bpy.data.objects.remove(obj_part, do_unlink=True)
 
         # Bu parçadaki modulbaglanti deliklerinden kulp çiftlerini ayır
@@ -960,24 +1141,24 @@ def count_order(order):
         kulp += kulp_from_part
         modulbag_centers.extend(remaining_modul)
 
-        # Ayarlı ayak: HAM ahsapcivisi listesinden ayıkla (izolasyon: ayak vidaları
+        # Ayarlı ayak: HAM agacvidasi listesinden ayıkla (izolasyon: ayak vidaları
         # ağaç vidası havuzunda KALIR, bkz. parca_kurallari.md).
-        ayak_bu_parca, ayak_noktalari, ayak_disi = extract_ayak_feet(part_ahsap_centers)
+        ayak_bu_parca, ayak_noktalari, ayak_disi = extract_ayak_feet(part_agacvida_centers)
         ayak += ayak_bu_parca
 
         # Ray desenleri artık KENDİNE ÖZGÜ delik havuzunda (part_ray_centers,
-        # RAY_DELIK_HACIMLERI) aranır — ahsapcivisi havuzuyla hiç KESİŞMEZ. Böylece
+        # RAY_DELIK_HACIMLERI) aranır — agacvidasi havuzuyla hiç KESİŞMEZ. Böylece
         # rastgele aralıklı gerçek ağaç vidaları artık ray sanılıp çalınamaz;
         # ayarlı ayak/ağaç vidası sayımı ray tespitinden tamamen bağımsızdır.
         part_rays, _ray_disi = detect_rays(part_ray_centers)
         ray_isimleri.extend(part_rays)
-        remaining_ahsap = ayak_noktalari + ayak_disi
-        counts["ahsapcivisi"] += len(remaining_ahsap)
+        remaining_agacvida = ayak_noktalari + ayak_disi
+        counts["agacvidasi"] += len(remaining_agacvida)
 
         if part_mentese > 0:
             parts_with_mentese += 1
         # Askılık flanşı: kalan ağaç vidası deliklerinden eşkenar üçgenler
-        askilik_flansi += count_equilateral_flanges(remaining_ahsap)
+        askilik_flansi += count_equilateral_flanges(remaining_agacvida)
 
         # Uzun linco pimi için: bu parçanın linco delik/yön çiftlerini sakla
         if part_linco_holes:
@@ -986,21 +1167,35 @@ def count_order(order):
     pairs = detect_modul_baglanti_pairs(modulbag_centers)
     # Farklı parçalardaki birbirine dayalı + yönü hizalı linco çiftleri → uzun linco pimi
     uzun_linco_pim = detect_long_linco_pins(linco_holes_by_part)
+    # Arkalık çivisi: Mert'in %25 tamponu (2026-09-01). Mevcut hesap (2*nx+2*nz) düz
+    # hesap — ek bir arttırma YOK, override edilecek bir şey yok; doğrudan ×1.25
+    # uygulanır, en yakın tam sayıya yuvarlanır.
+    arkalik_civi = round(arkalik_civi * 1.25)
 
     linco = counts["linco"]
-    linco_dubel = linco - 2 * uzun_linco_pim   # her uzun pim = 2 linco dübeli yerine 1
+    # Mert'in tedarik tamponu (2026-09-01): linco adedine boyut bazlı ekleme.
+    # ≤20 → +1, 21–99 → +2, 100+ → +3 (100 sınırı +3'e sayılır). Mert'in yazdığı
+    # sınıflar 21-49'u kapsamadığından Kerem kararıyla o aralık +2 kabul edildi.
+    if linco <= 20:
+        linco_ekle = 1
+    elif linco < 100:
+        linco_ekle = 2
+    else:
+        linco_ekle = 3
+    linco_adj = linco + linco_ekle            # tamponlu sayı (Gövde/Kapak/Minifix/Dübel + gram)
+    linco_dubel = linco_adj - 2 * uzun_linco_pim   # her uzun pim = 2 linco dübeli yerine 1
     mentese_tabani = counts["menteseTabani"]
     frenli = parts_with_mentese
     frensiz = mentese_tabani - frenli
     raf_pimi = counts["rafpimi"] // 3     # her raf pimi = 3 delik
     l_baglanti = L_BAGLANTI_ADET
-    # Ray'lerde kullanılan delik sayısı (RAY_DELIK_HACIMLERI havuzundan, ahsapcivisi
+    # Ray'lerde kullanılan delik sayısı (RAY_DELIK_HACIMLERI havuzundan, agacvidasi
     # havuzuna hiç girmedi — ama ray varsa o rayların delikleri de birer vidayla
     # kapatıldığından, genel ağaç vidası adedinden düşülür).
     ray_delik_toplam = sum(len(RAY_HOLE_POSITIONS[name]) for name in ray_isimleri)
     # Ağaç vidası = doğrudan hacimden sayılan delik sayısı + her L bağlantı seti
-    # için 4 adet − ray'lerde kullanılan delik sayısı.
-    agac_vidasi = counts["ahsapcivisi"] + 4 * l_baglanti - ray_delik_toplam
+    # için 2 adet − ray'lerde kullanılan delik sayısı.
+    agac_vidasi = counts["agacvidasi"] + 2 * l_baglanti - ray_delik_toplam
     askilik_borusu = askilik_flansi // 2     # her 2 flanşı için 1 boru
     ray_adet = len(ray_isimleri)             # tespit edilen tekil ray sayısı
     ray_counter = Counter(ray_isimleri)      # boya göre tekil ray sayısı
@@ -1013,14 +1208,14 @@ def count_order(order):
         "Menteşe Tabanı": mentese_tabani,
         "Modülleri Birbirine Bağlama": pairs,
         "Raf Pimi": raf_pimi,
-        "Linco Gövde": linco,
-        "Linco Kapak": linco,
+        "Linco Gövde": linco_adj,
+        "Linco Kapak": linco_adj,
         "Linco Dübel": linco_dubel,
-        "Minifix": linco,
+        "Minifix": linco_adj,
         "Uzun Linco Pimi": uzun_linco_pim,
         "Ayarlı Ayak": ayak,
         "Allen": 1 if ayak >= 1 else 0,
-        "Tıpa": ayak,
+        "Tıpa": counts["tipa"],   # doğrudan tipa deliği hacmi (1392.75 mm³, %1) — ayarlı ayaktan türetme DEĞİL
         "Kulp": kulp,
         "Kulp Vidası": 2 * kulp,
         "L Bağlantı Seti": l_baglanti,
@@ -1035,11 +1230,11 @@ def count_order(order):
 
     gram = {
         "Raf Pimi": gr(raf_pimi, WEIGHTS["rafpimi"]),
-        "Ağaç Vidası": gr(agac_vidasi, WEIGHTS["ahsapcivisi"]),
-        "Minifix": gr(linco, WEIGHTS["minifix"]),
+        "Ağaç Vidası": gr(agac_vidasi, WEIGHTS["agacvidasi"]),
+        "Minifix": gr(linco_adj, WEIGHTS["minifix"]),
         "Linco Dübel": gr(linco_dubel, WEIGHTS["lincodubel"]),
-        "Linco": gr(linco, WEIGHTS["linco"]),
-        "Linco Kapak": gr(linco, WEIGHTS["lincokapak"]),
+        "Linco": gr(linco_adj, WEIGHTS["linco"]),
+        "Linco Kapak": gr(linco_adj, WEIGHTS["lincokapak"]),
         "Çivi": gr(arkalik_civi, WEIGHTS["civi"]),
     }
 

@@ -21,7 +21,7 @@ mesafelerden** çıkarılmalı.
 
 ## Kritik keşif: ray deliği ağaç vidası deliği DEĞİL
 
-İlk sürüm ray desenini `ahsapcivisi` havuzunda (14.57 mm³) arıyordu. Bu iki hataya
+İlk sürüm ray desenini `agacvidasi` havuzunda (14.57 mm³) arıyordu. Bu iki hataya
 yol açtı:
 
 1. **Gerçek ağaç vidaları ray sanıldı.** Panele rastgele aralıklarla dağılmış vidalar

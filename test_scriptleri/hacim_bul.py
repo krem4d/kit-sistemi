@@ -39,7 +39,7 @@ import os
 CATEGORIES = {
     "linco": 9680.0,
     "pim": 936.0,            # Linco Dübel
-    "ahsapcivisi": 14.57,    # Ağaç vidası (gerçek FBX ölçümü: ~14.57)
+    "agacvidasi": 14.57,    # Ağaç vidası (gerçek FBX ölçümü: ~14.57)
     "rafpimi": 234.0,
     "modulbaglanti": 351.35,
     "menteseTabani": 11454.0131,

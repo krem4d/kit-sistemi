@@ -41,7 +41,7 @@ Tam bağımlılık haritası:
 | Tıpa | Ayarlı Ayak | `= ayak` |
 | Kulp Vidası | Kulp | `2 × kulp` |
 | Askılık Borusu | Askılık Flanşı | `flanş // 2` |
-| Ağaç Vidası | ahsapcivisi + L + ray | `sayım + 4×L − ray_delik` |
+| Ağaç Vidası | agacvidasi + L + ray | `sayım + 4×L − ray_delik` |
 | L Bağlantı Seti | — | sabit `2` |
 
 ---
@@ -93,7 +93,7 @@ Basit çarpım, 1 ondalığa yuvarlama.
 | Anahtar | Gram | Parça |
 |---|---|---|
 | `rafpimi` | 2.7 | Raf Pimi |
-| `ahsapcivisi` | 1.108 | Ağaç Vidası |
+| `agacvidasi` | 1.108 | Ağaç Vidası |
 | `minifix` | 3.401 | Minifix |
 | `lincodubel` | 4.4 | Linco Dübel |
 | `linco` | 4.631 | Linco Gövde |

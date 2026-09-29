@@ -1,50 +1,37 @@
 """
-ray_delik_empty.py — SEÇİLİ parçadaki ray'e özgü deliklere (RAY_DELIK_HACIM
-bandı, ağaç vidasından FARKLI) Empty koyar.
+ahsap_civisi_empty.py — Seçili parçalardaki (veya tüm sahnedeki) Ağaç Vidası deliklerine Empty atar.
 
-AMAÇ: hacim_bul.py raporuyla ray'e özgü deliklerin ağaç vidasıyla AYNI hacimde
-OLMADIĞI bulundu (ör. Object_23'te 3 delik ~84.92, [BİLİNMİYOR] — CATEGORIES'teki
-hiçbir hacimle eşleşmiyordu). parca_sayim.py bu bilgiyle RAY_DELIK_HACIM sabitini
-kullanacak şekilde düzeltildi (ray artık bu bandın delikleri arasından aranıyor,
-agacvidasi havuzuna dokunmuyor). Bu geçici araç, o düzeltmeyi/RAY_GAPS örüntüsünü
-daha ileri debug edebilmen için: seçtiğin parçadaki ray-bandı deliklerinin
-merkezine bir Empty koyar; böylece bu delikleri viewport'ta görüp
-iki_obje_mesafe.py (artık TÜM ikili kombinasyonları ölçüyor) ile aralarındaki
-mesafeleri ölçebilirsin.
-
-KULLANIM (GUI):
-    1) Viewport'ta parçayı SEÇ (bir veya birden çok mesh seçebilirsin).
+KULLANIM (Blender GUI):
+    1) Viewport'ta incelemek istediğin parçaları SEÇ (Hiçbir şey seçmezsen TÜM sahneyi tarar).
     2) Scripting sekmesinde bu dosyayı çalıştır.
-    3) Her ray-bandı deliğinin merkezine bir Empty gelir; konsolda hacim listesi.
+    3) Her ağaç vidası deliğinin merkezine 'ahsap1', 'ahsap2', ... şeklinde Empty (Küre) konur
+       ve ilgili parça objesine parent edilir (dünya konumu korunarak).
+    4) Konsolda kaç ağaç vidası deliği bulunduğu listelenir.
 
-ÇIKTI:
-    - Her delik için Empty (küre):  "raydelik_<Parca>#<i>_<hacim>"
-    - Konsolda: parça başına delik sayısı + HER deliğin hacmi.
-
-NOT: RAY_DELIK_HACIMLERI = [84.9181, 80.8258], RAY_DELIK_TOL = %1 (parca_sayim.py
-     ile AYNI sabit, buraya birebir kopyalanmıştır). Modellerde İKİ farklı ray
-     deliği geometrisi var: normal 84.92 (16 parça), 9363'te 80.83 (2 parça).
-     Bkz. parca_sayim.py:102 ve test_scriptleri/ray_hacim_tarama.py.
+Not: Bu, HAM ağaç vidası deliği havuzudur (14.57 mm³, %5 tol). Ayak/Eşkenar flanş gibi
+türetmeler BU havuzdan beslenir ama havuzun kendisi burada görünür; yani tespit edilen
+bu deliklerin bir kısmı ayak vidası veya askılık flanşı olarak da değerlendirilir.
 """
 
 import bpy
 import bmesh
 import mathutils
 
-# ── Ray deliği hacim bandları (parca_sayim.py ile AYNI) ──────────────────────
-RAY_DELIK_HACIMLERI = [84.9181, 80.8258]
-RAY_DELIK_TOL = 0.01
-BANDLAR = [(h * (1 - RAY_DELIK_TOL), h * (1 + RAY_DELIK_TOL))
-           for h in RAY_DELIK_HACIMLERI]
+# ── Ağaç Vidası Hacim Tanımı (parca_sayim.py CATEGORIES ile birebir) ─────────
+AHSAp_HACIM = 14.57
+TOLERANCE = 0.05  # %5 tolerans -> [13.84, 15.30] mm³
+
+AHSAp_MIN = AHSAp_HACIM * (1 - TOLERANCE)
+AHSAp_MAX = AHSAp_HACIM * (1 + TOLERANCE)
+
+EMPTY_BOYUT = 0.015  # Empty görünüm boyutu (metre)
 
 
-def ray_deligi_mi(v):
-    return any(lo <= v <= hi for lo, hi in BANDLAR)
-
-EMPTY_BOYUT = 0.012        # Empty görünüm boyutu (metre; sahne 1 birim = 1000 mm)
+def is_ahsap(v):
+    return AHSAp_MIN <= v <= AHSAp_MAX
 
 
-# ── Yardımcılar (parca_sayim.py ile aynı) ────────────────────────────────────
+# ── Çift Boolean Yardımcıları ────────────────────────────────────────────────
 def get_perfect_local_bounds(obj):
     verts = obj.data.vertices
     if not verts:
@@ -73,7 +60,6 @@ def create_prism(name, dim, center_local, matrix_world, scale_factor):
 
 
 def execute_double_boolean(original_obj):
-    """original_obj içindeki delikleri {'object','volume'} listesi döndürür."""
     dim, center_local = get_perfect_local_bounds(original_obj)
     if not dim:
         return []
@@ -120,55 +106,50 @@ def world_center(obj):
     return sum(wb, mathutils.Vector()) / 8.0
 
 
-def add_empty(name, loc_m, size=EMPTY_BOYUT):
+def add_empty_parented(name, loc_m, parent_obj, size=EMPTY_BOYUT):
     e = bpy.data.objects.new(name, None)
     e.empty_display_type = 'SPHERE'
     e.empty_display_size = size
     e.location = loc_m
     bpy.context.collection.objects.link(e)
+    e.parent = parent_obj
+    e.matrix_parent_inverse = parent_obj.matrix_world.inverted()
     return e
 
 
-def _safe(name):
-    return name.replace(" ", "_")[:20]
-
-
-# ── Ana logic ────────────────────────────────────────────────────────────────
 def main():
     secili = [o for o in bpy.context.selected_objects if o.type == 'MESH']
     if not secili:
-        print("!! Seçili MESH yok. Önce viewport'ta parçayı seç, sonra çalıştır.")
-        return
+        secili = [o for o in bpy.context.scene.objects if o.type == 'MESH' and not o.name.startswith("Temp_")]
+        print(f"\n[BİLGİ] Seçili obje olmadığı için tüm sahnedeki {len(secili)} MESH taranıyor.")
+    else:
+        print(f"\n[BİLGİ] {len(secili)} seçili MESH taranıyor.")
 
-    print(f"\n=== ray_delik_empty: {len(secili)} seçili parça taranıyor ===")
-    bandlar_str = "  ".join(f"[{lo:.2f}, {hi:.2f}]" for lo, hi in BANDLAR)
-    print(f"    ray deliği bandları: {bandlar_str}  (hacimler={RAY_DELIK_HACIMLERI}, tol=%{RAY_DELIK_TOL*100:.0f})\n")
+    print(f"Ağaç vidası hacim aralığı: [{AHSAp_MIN:.2f}, {AHSAp_MAX:.2f}] mm³ (Hedef: {AHSAp_HACIM}, Tol: %{TOLERANCE*100:.0f})\n")
 
-    toplam_ray_delik = 0
+    toplam = 0
     for o in secili:
         try:
             holes = execute_double_boolean(o)
         except Exception as e:
-            print(f"  [UYARI] {o.name}: delik taraması başarısız ({e})")
+            print(f"  [UYARI] {o.name}: Delik taraması başarısız ({e})")
             continue
 
-        vols = sorted(h["volume"] for h in holes)
-        idx = 0
+        bu_parca = 0
         for h in holes:
             v = h["volume"]
-            if ray_deligi_mi(v):
+            if is_ahsap(v):
                 c = world_center(h["object"])
-                add_empty(f"raydelik_{_safe(o.name)}#{idx}_{v:.2f}", c)
-                idx += 1
+                toplam += 1
+                add_empty_parented(f"ahsap{toplam}", c, parent_obj=o)
+                bu_parca += 1
             bpy.data.objects.remove(h["object"], do_unlink=True)
 
-        toplam_ray_delik += idx
-        print(f"  {o.name}: {idx} ray-bandı deliği (toplam {len(holes)} delik). "
-              f"Tüm hacimler: {[round(v, 1) for v in vols]}")
+        if bu_parca > 0:
+            print(f"  {o.name}: {bu_parca} adet ağaç vidası deliği bulundu.")
 
-    print(f"\n>> Toplam {toplam_ray_delik} ray-bandı deliği Empty'si kondu "
-          f"(viewport'ta 'raydelik_' önekiyle filtrele).")
-    print("   Sonra hepsini seçip iki_obje_mesafe.py ile TÜM ikili mesafeleri ölç.")
+    print(f"\n>> Toplam {toplam} Ağaç vidası deliğine Empty eklendi (ahsap1..ahsap{toplam}).")
+    print("   Empty'ler ilgili parçalara parent edildi.")
 
 
 if __name__ == "__main__":

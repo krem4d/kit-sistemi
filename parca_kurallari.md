@@ -52,9 +52,14 @@ uygular. Kaynak türleri:
 
 ### Linco Gövde / Linco Kapak / Linco Dübel / Minifix
 - **Kaynak:** delik (`linco` = 9680).
-- **Kural:** Linco Gövde = Linco Kapak = Minifix = `linco delik sayısı` (değişmez).
-  **Linco Dübel** = `linco delik sayısı − 2 × uzun linco pimi` (bkz. Uzun Linco Pimi).
-- **Adet:** Gövde/Kapak/Minifix = linco delik sayısı; Dübel = linco − 2×uzun pim.
+- **Kural:** Linco Gövde = Linco Kapak = Minifix = `linco delik sayısı + Mert tamponu`
+  (değişmez). **Linco Dübel** = `linco delik sayısı + Mert tamponu − 2 × uzun linco pimi`
+  (bkz. Uzun Linco Pimi).
+  - **Mert tedarik tamponu (2026-09-01):** linco adedine göre ≤20 → +1, 21–99 → +2,
+    100+ → +3. Mert'in yazdığı sınıflar 21-49'u kapsamıyordu; Kerem kararıyla o aralık
+    +2 kabul edildi, 100 sınırı +3'e sayıldı.
+- **Adet:** Gövde/Kapak/Minifix = tamponlu linco; Dübel = tamponlu linco − 2×uzun pim.
+  Gram (Minifix/Linco/Linco Kapak) da tamponlu sayıdan — adet ile tutarlı.
 - Not: `pim` (936, Linco Dübel deliği) çapraz kontrol için kullanılabilir.
 - Not: Renk ayrımı (BEYAZ/GRİ) ertelendi (Eksikler.md — Mert entegrasyonu).
 
@@ -89,7 +94,7 @@ uygular. Kaynak türleri:
   `LONG_LINCO_AXIS_MIN`.
 
 ### Ayarlı ayak
-- **Kaynak:** geometri (`ahsapcivisi` deliklerinin oluşturduğu **dikdörtgen**).
+- **Kaynak:** geometri (`agacvidasi` deliklerinin oluşturduğu **dikdörtgen**).
 - **Kural (GEOMETRİK tespit — sıralı-mesafe listesiyle KIYASLAMAZ):** Bir parçadaki
   ağaç vidası delikleri arasından kenarları **~32 × ~40 mm** (köşegen ~51.22 mm) olan
   bir **dikdörtgen** oluşturan **4'lü** = **1 ayarlı ayak**. Kullanılan teorem: *bir
@@ -109,7 +114,7 @@ uygular. Kaynak türleri:
   çalınmıştı (bkz. aşağıdaki sıralama düzeltmesi) → ayak SIFIR bulunuyordu. Yeni
   köşegen+orta-nokta yöntemi bu topolojiyi doğrudan kullanır, sıralamaya bağlı değildir.
 - **Sıralama düzeltmesi (tarihsel — artık yapısal olarak imkansız):** Bir ara sürümde
-  ray tespiti ayak tespitinden ÖNCE, aynı `ahsapcivisi` havuzu üzerinde çalışıyordu; bu
+  ray tespiti ayak tespitinden ÖNCE, aynı `agacvidasi` havuzu üzerinde çalışıyordu; bu
   yüzden ray'in geniş/bağlamsız greedy mesafe eşleşmesi gerçek bir ayak köşesini "ray"
   sanıp yutabiliyordu → o ayak 3 köşeye düşüp hiç yakalanamıyordu. Bunu, ayağı ray'den
   ÖNCE ayıklayarak (`extract_ayak_feet()`) geçici olarak düzeltmiştik. Artık ray tespiti
@@ -130,11 +135,32 @@ uygular. Kaynak türleri:
   önce çağrılır), `count_ayak_feet()` (adet-only kısayol, teşhis/test için).
 
 ### Ağaç vidası (kit adedi)
-- **Kaynak:** doğrudan delik (`ahsapcivisi` = 14.57, %5) + L bağlantı türetmesi.
-- **Kural:** `(ahsapcivisi havuzundaki tüm delik sayısı, ayak dahil) + 4 × L bağlantı seti`.
-- **Not (DÜZELTİLDİ):** Ray delikleri ahşap vidasıyla AYNI delik DEĞİL — kendine özgü bir
+- **Kaynak:** doğrudan delik (3 tanıma yolu, aşağıda) + L bağlantı türetmesi.
+- **Kural:** `(agacvidasi havuzundaki tüm delik sayısı, ayak dahil) + 4 × L bağlantı seti`.
+- **Tanıma — 3 yol, hepsi aynı havuza girer (2026-09-01):** Ağaç vidası deliğinde
+  üründen ürüne değişmeyen şey hacim değil **kesit alanıdır** (çap sabit 2.46 mm,
+  derinlik değişken → hacim değişken):
+  1. **Standart kör delik:** hacim `agacvidasi` = 14.57, %5 (eski yol, değişmedi).
+  2. **Karşıya çıkan delik:** hacim `agacvidasiTam` = 83.2121, **%1** (18mm panel ×
+     4.6229 mm² kesit). %1 katı: band [82.38, 84.04], iki ray bandının ([80.02, 81.63]
+     / [84.07, 85.76]) tam arasına sıkışıyor — genişletme.
+  3. **Değişken derinlikli kör delik:** hacim bandıyla yakalanamaz;
+     `agac_vidasi_degisken_mi()` boolean boşluğunun bbox'undan tanır. Boşluk parçanın
+     LOKAL ekseninde durduğundan iki yanal bbox kenarı ≈ çap (2.46 ±%5), üçüncü kenar =
+     derinlik (1–40 mm), `hacim/derinlik` ≈ sabit kesit (`AGAC_VIDA_KESIT_MM2` = 4.627,
+     ±%1.5). Ray-cast/yön tespiti gerekmez; derinlik < çap olan sığ deliklerde de çalışır
+     (en-uzun-eksen varsayımı YOK). Sıra önemli: `is_ray_hole()`'dan SONRA denenir —
+     bilinen ray hacim bandları önce ayıklanır; kaçan bir ray deliği bile kesit denetimine
+     takılır (ray kesiti ≈ 4.718, bandın dışında).
+  - **Dairesellik için RANSAC gerekmez:** yanal kenarların d×d çıkması + kesit denetimi
+    birlikte A/d² ≈ 0.765 oranını (16-gen silindir) zorlar; kare kanal (1.0) ve
+    eşkenar-dörtgen profil (0.5) elenir — doğrulandı (test 5).
+  - **Ölçüm kanıtı (2026-09-01, `delik bulma.blend`, pipeline boolean'ı ile):** kör örnek
+    13.83 mm³ / 2.988 mm → 4.629 mm²; karşıya çıkan 83.2121/18 → 4.6229; delik ağzı kapak
+    yüzeyi 4.632. Teşhis sayaçları JSON `_ham` içinde: `_agacvida_tam`, `_agacvida_degisken`.
+- **Not (DÜZELTİLDİ):** Ray delikleri ağaç vidasıyla AYNI delik DEĞİL — kendine özgü bir
   hacme sahipler (bkz. Ray Seti → `RAY_DELIK_HACIM`). Eskiden "ray delikleri de ahşap
-  vidası boyutunda" varsayılıp ray'ler `ahsapcivisi` havuzunda aranıyordu; bu yüzden
+  vidası boyutunda" varsayılıp ray'ler `agacvidasi` havuzunda aranıyordu; bu yüzden
   rastgele aralıklı GERÇEK ağaç vidaları tesadüfen bir ray desenine uyup yanlışlıkla
   ray sayılabiliyor, ağaç vidası sayımından haksız yere düşülebiliyordu (kanıt:
   `hacim_bul_raporu.txt`, Object_23 — ray'e ait delikler `[BİLİNMİYOR]`, hiçbir
@@ -143,15 +169,15 @@ uygular. Kaynak türleri:
 - **Şimdiki sabit:** L bağlantı = 2 (sipariş başına) → +8.
 
 ### Ray Seti (çekmece rayı)
-- **Kaynak:** geometri — `ahsapcivisi` DEĞİL, kendine özgü **`RAY_DELIK_HACIM`** (≈84.92,
+- **Kaynak:** geometri — `agacvidasi` DEĞİL, kendine özgü **`RAY_DELIK_HACIM`** (≈84.92,
   %2 tolerans) hacim bandındaki deliklerin ray deseninden tespiti.
 - **Keşif (kritik düzeltme):** `hacim_bul.py` ile Object_23 taranınca ray'e ait 3 delik
   CATEGORIES'teki hiçbir hacimle eşleşmedi (`[BİLİNMİYOR]`, hacimler: 84.9189/84.9188/
-  84.9175) — yani ray delikleri ahşap vidası (14.57) ile AYNI delik değilmiş. Eski
-  algoritma ray'i `ahsapcivisi` havuzunda arıyordu; bu yüzden gerçek ağaç vidaları
+  84.9175) — yani ray delikleri ağaç vidası (14.57) ile AYNI delik değilmiş. Eski
+  algoritma ray'i `agacvidasi` havuzunda arıyordu; bu yüzden gerçek ağaç vidaları
   tesadüfen bir ray-aralık desenine uyup yanlış ray boyu buluyordu (ör. gerçek 55cm ray
   25cm bulunuyordu). Düzeltme: ray artık SADECE `RAY_DELIK_HACIM` bandındaki delikler
-  arasından aranır; bu havuz `ahsapcivisi`/ayarlı ayak havuzuyla hiç kesişmez.
+  arasından aranır; bu havuz `agacvidasi`/ayarlı ayak havuzuyla hiç kesişmez.
 - **Kalibrasyon:** kulp deliği modelde `0.192` birim ↔ gerçek `192 mm` → **1 birim = 1000 mm**
   (`RAY_SCALE_MM = 1000`).
 - **Örüntünün kaynağı (KULLANICI ÖLÇÜMÜ — kesin):** Her ray boyunun delikleri,
@@ -172,7 +198,7 @@ uygular. Kaynak türleri:
   JSON'da `ray_setleri` (ör. `{"55cm": 2, "30cm": 1}`). PDF'te her boy **ayrı satır**
   ("Ray Seti 55cm", "Ray Seti 30cm"…); hiç ray yoksa tek "Ray Seti" = 0 satırı.
 - **İzolasyon:** `RAY_DELIK_HACIM` bandına giren ama hiçbir ray desenine uymayan
-  delikler ağaç vidası sayımına EKLENMEZ (zaten ahsapcivisi hacminde değiller);
+  delikler ağaç vidası sayımına EKLENMEZ (zaten agacvidasi hacminde değiller);
   ağaç vidası havuzu ray tespitinden bağımsızdır.
 - Sabitler `parca_sayim.py`: `RAY_SCALE_MM`, `RAY_TOL_MM`, `RAY_COLINEAR_TOL_MM`,
   `RAY_HOLE_POSITIONS`, `RAY_GAPS` (konumlardan türetilir).
@@ -198,9 +224,11 @@ uygular. Kaynak türleri:
 - **Kural:** siparişte **≥ 1 ayarlı ayak varsa 1**, yoksa **0**.
 
 ### Tıpalar
-- **Kaynak:** türetme (ayarlı ayaktan).
-- **Kural:** **her ayarlı ayak için 1 tıpa**.
-- **Adet:** `ayarlı ayak sayısı`.
+- **Kaynak:** doğrudan delik (`tipa` = 1392.7481 mm³, %1 tolerans).
+- **Kural:** `tipa` bandındaki (≈1392.75 mm³) delik sayısı. Eski kural ("her ayarlı ayak
+  için 1 tıpa", ayarlı ayaktan türetme) kaldırıldı — tıpa artık kendi deliğinin bandından
+  sayılıyor (karar 2026-09-01).
+- **Adet:** `counts["tipa"]` (banda giren delik sayısı).
 - **Renk:** artık uygulanıyor — bkz. aşağıdaki "Renk (Linco/Linco Kapak/Tıpa)" bölümü.
 
 ### Renk (Linco Gövde/Linco Kapak/Tıpa)
@@ -253,6 +281,9 @@ uygular. Kaynak türleri:
 - Her (birleşmiş veya tekil) arkalık panelinin çevresine `CIVI_ARALIK_MM`
   (150 mm) aralıkla çivi: `2·ceil(W/150) + 2·ceil(H/150)`.
 - **Adet:** tüm arkalık panellerinin (birleştirmeden sonraki) çivi toplamı.
+- **Mert tedarik tamponu (2026-09-01):** bu toplam **× 1.25**, en yakın tam sayıya yuvarlanır
+  (Python `round`, yarıda çift sayıya yuvarlar). Mevcut hesapta ek bir arttırma yoktu,
+  override edilecek bir şey yok.
 - Ayarlanabilir sabitler `parca_sayim.py` başında. Aralık (150 mm) orijinal 0.15 m
   kuralının mm karşılığı; gerçek sayımla kıyaslayıp ince ayar yapılabilir.
 
@@ -264,7 +295,7 @@ uygular. Kaynak türleri:
 |-------|-----------------|-------|
 | Askılık flanşı | eşkenar üçgen tespiti (yukarıda) | ✅ entegre |
 | Askılık borusu | flanşı/2 (yukarıda) | ✅ entegre |
-| Ray (Set) | ahşap vidası deliği deseni + kalibrasyon (yukarıda) | ✅ entegre |
+| Ray (Set) | ağaç vidası deliği deseni + kalibrasyon (yukarıda) | ✅ entegre |
 | L Bağlantı Seti | şimdilik sabit **2** (yukarıda) | 🟡 geçici |
 | L Modül Uzun Linco Pimi | birbirine dayalı linco çifti (~43 mm, yukarıda) | ✅ entegre |
 | **Ağaç vidası** | delik sayısı + 4×L (yukarıda) | ✅ entegre |

@@ -7,7 +7,7 @@ import math
 CATEGORIES = {
     "linco": 9680.0,
     "pim": 936.0,
-    "ahsapcivisi": 19.48,
+    "agacvidasi": 19.48,
     "rafpimi": 234.0,
     "modulbaglantı": 351.35
 }
@@ -359,7 +359,7 @@ def main():
             if not holes:
                 continue
 
-            ahsapcivisi_bellek = []
+            agacvidasi_bellek = []
 
             for i, h in enumerate(holes):
                 vol = h['volume']
@@ -399,16 +399,16 @@ def main():
 
                     align_empty_advanced(empty_obj, target_obj, matched_category)
 
-                    if matched_category == "ahsapcivisi":
-                        ahsapcivisi_bellek.append(empty_obj)
+                    if matched_category == "agacvidasi":
+                        agacvidasi_bellek.append(empty_obj)
 
                     bpy.data.objects.remove(obj_part, do_unlink=True)
                 else:
                     bpy.data.objects.remove(obj_part, do_unlink=True)
 
-            if len(ahsapcivisi_bellek) == 4:
-                avg_local_pos = sum((c.location for c in ahsapcivisi_bellek), mathutils.Vector()) / 4.0
-                z_dir_local = ahsapcivisi_bellek[0].rotation_euler.to_matrix() @ mathutils.Vector((0, 0, 1))
+            if len(agacvidasi_bellek) == 4:
+                avg_local_pos = sum((c.location for c in agacvidasi_bellek), mathutils.Vector()) / 4.0
+                z_dir_local = agacvidasi_bellek[0].rotation_euler.to_matrix() @ mathutils.Vector((0, 0, 1))
 
                 min_b, max_b = get_bbox_min_max(target_obj)
                 all_dirs = [
@@ -437,7 +437,7 @@ def main():
                 empty_ay.location = avg_local_pos
                 align_axes(empty_ay, z_dir_local, best_x_dir)
 
-                for civi in ahsapcivisi_bellek:
+                for civi in agacvidasi_bellek:
                     bpy.data.objects.remove(civi, do_unlink=True)
 
     if modulbaglantı_bellek:
