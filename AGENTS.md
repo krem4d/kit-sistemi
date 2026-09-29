@@ -129,7 +129,15 @@ Each cavity's volume is matched to a category (`match_category`) within `TOLERAN
 - **Ağaç Vidası** = (non-ray wood-screw holes) + 4 × L bağlantı seti.
 - **Askılık Flanşı** = equilateral (~60°, ±2% sides) triangles of wood-screw holes
   (`count_equilateral_flanges`); **Askılık Borusu** = flanşı // 2.
-- **L Bağlantı Seti** = fixed **2** per order (`L_BAGLANTI_ADET`, temporary).
+- **L Bağlantı Seti** (wall bracket) = **2 × module columns** (Kerem, 2026-09-29).
+  `count_order` → `modul_sutun_bilgisi()` runs `module_ayirici/module_segmenter.segment()`
+  right after `prepare_unique_parts()` (before any boolean), then
+  `module_ayirici/sutunlar.py` groups modules whose plan footprints overlap by ≥
+  `SUTUN_ORTUSME_ORANI` (0.5 of the narrower module, both x and y). Name-free, works on
+  `Object_N` orders. Falls back to `L_BAGLANTI_ADET`=2 if segmentation fails / finds no
+  module; the JSON `moduller` block records `kaynak`, columns and module boxes. Tests:
+  `python3 tests/test_sutunlar.py`, Blender `tests/test_sutun_blender.py`, corpus
+  `tests/sutun_korpus.py` + `tests/sutun_korpus_karsilastir.py`.
 - **Arkalık Çivisi** = perimeter nails of back panels (parts thinner than
   `ARKALIK_MAX_KALINLIK`=8 mm), spaced `CIVI_ARALIK_MM`=150 mm.
 - **Gram** columns = quantity × `WEIGHTS[...]` (see `Ağırlıklar.md`).
@@ -267,8 +275,9 @@ runs it in the GUI → analyze the report → then build/adjust the pipeline rul
 
 ## 8. Deferred / needs external input (see `Eksikler.md`)
 
-- **L Bağlantı Seti / Vidası / Dübeli** — currently a hard-coded 2; real detection needs
-  module identification and a decision (with "Mert").
+- ~~**L Bağlantı Seti / Vidası / Dübeli**~~ — **done** (2026-09-29): 2 × module columns
+  from geometry, see §4e. Open: the 2026-09-01 reference 9364-2 = 3 is odd, so it cannot
+  be 2 × columns — check with Mert if it resurfaces.
 - **Kulp** — some models have handles without a kulp dummy; detection will change.
 - **Ray sets** — partially done; Mert to relate rail lengths to screw spacings.
 - ~~**Color of colored parts**~~ — **done**, see §4g (`renkler/<order>.json` +

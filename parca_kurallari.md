@@ -215,9 +215,19 @@ uygular. Kaynak türleri:
 - **Kaynak:** türetme (askılık flanşından).
 - **Kural:** **her 2 askılık flanşı için 1 boru** → `askılık flanşı // 2`.
 
-### L Bağlantı Seti
-- **Kural (şimdilik):** her sipariş için **sabit 2** (set + vidası + dübeli tek satırda).
-- İleride modelden tespit edilebilir (Mert ile).
+### L Bağlantı Seti (duvar bağlantı braketi)
+- **Kural (Kerem, 2026-09-29):** **2 × modül sütunu** (set + vidası + dübeli tek satırda).
+  Sütun = önden bakınca aynı yatay aralıkta üst üste duran modüller (1–3 modül); her
+  sütunun en üst modülüne bir sol + bir sağ braket.
+- **Kaynak:** geometri, parça adı kullanılmaz (`Object_N` siparişlerde de çalışır).
+  `module_ayirici/module_segmenter.py` modülleri (gövdeleri) 18 mm panel temaslarından
+  ayırır; `module_ayirici/sutunlar.py` plan izdüşümü (x ve y) dar olanın en az
+  `SUTUN_ORTUSME_ORANI` = 0.5'i kadar örtüşen modülleri aynı sütuna koyar. Korpusta
+  (471 modül) modül çiftlerinin x örtüşme oranı ya ~0 (yan yana) ya tam 1.0 (üst üste).
+- **Yedek:** ayırıcı yüklenemez/hata verir/hiç modül bulamazsa `L_BAGLANTI_ADET` = 2;
+  JSON'da `moduller.kaynak = "yedek_sabit"` ve `moduller.hata` görünür.
+- **JSON:** `moduller` = `{kaynak, braket, modul_sayisi, sutun_sayisi, sutunlar, kutular, ...}`.
+- Bölünmüş siparişte (ör. 9360-1/-2) her FBX kendi sütunlarını sayar; toplam doğru çıkar.
 
 ### Allen (anahtar)
 - **Kaynak:** türetme (ayarlı ayaktan).
@@ -296,7 +306,7 @@ uygular. Kaynak türleri:
 | Askılık flanşı | eşkenar üçgen tespiti (yukarıda) | ✅ entegre |
 | Askılık borusu | flanşı/2 (yukarıda) | ✅ entegre |
 | Ray (Set) | ağaç vidası deliği deseni + kalibrasyon (yukarıda) | ✅ entegre |
-| L Bağlantı Seti | şimdilik sabit **2** (yukarıda) | 🟡 geçici |
+| L Bağlantı Seti | 2 × modül sütunu, geometriden (yukarıda) | ✅ entegre |
 | L Modül Uzun Linco Pimi | birbirine dayalı linco çifti (~43 mm, yukarıda) | ✅ entegre |
 | **Ağaç vidası** | delik sayısı + 4×L (yukarıda) | ✅ entegre |
 | Renkli parça (renk ayrımı) | Mert entegrasyonu | ⛔ ertelendi |

@@ -32,7 +32,27 @@ import glob
 import json
 import math
 import itertools
+import sys
 from collections import Counter
+
+# ── Modül ayırıcı (module_ayirici/) — kod dizininden yüklenir ────────────────
+# Veri kökü (BASE) ADAPTX_BASE ile başka yerde olabilir; ayırıcı ise bu dosyanın
+# yanındaki module_ayirici/ klasöründedir. İçe aktarma başarısız olursa sayım
+# durmaz: L Bağlantı Seti eski sabite (L_BAGLANTI_ADET) düşer ve JSON'da görünür.
+try:
+    _KOD_DIZINI = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    _KOD_DIZINI = os.getcwd()
+_MODUL_AYIRICI_DIZINI = os.path.join(_KOD_DIZINI, "module_ayirici")
+if os.path.isdir(_MODUL_AYIRICI_DIZINI) and _MODUL_AYIRICI_DIZINI not in sys.path:
+    sys.path.insert(0, _MODUL_AYIRICI_DIZINI)
+try:
+    import module_segmenter
+    import sutunlar
+    _MODUL_AYIRICI_HATA = None
+except Exception as _e:   # ayırıcı yoksa/bozuksa sayım yine çalışsın
+    module_segmenter = sutunlar = None
+    _MODUL_AYIRICI_HATA = repr(_e)
 
 # ── Yol çözümü (proje dizini) ────────────────────────────────────────────────
 def _base_dir():
@@ -197,8 +217,14 @@ PARCA_RENK_KURALI = {
     "Gri":   {"Linco Gövde": "Siyah", "Linco Kapak": "Siyah", "Tıpa": "Siyah"},
 }
 
-# ── Sabit varsayımlar (şimdilik) ─────────────────────────────────────────────
-L_BAGLANTI_ADET = 2          # her sipariş için 2 L bağlantı seti (set+vida+dübel dahil)
+# ── L Bağlantı Seti = duvar bağlantı braketi ─────────────────────────────────
+# Kural (Kerem, 2026-09-29): braket = 2 × modül sütunu (her sütunun en üst
+# modülüne sol + sağ). Sütunlar geometriden bulunur: module_segmenter modülleri
+# ayırır, sutunlar.py plan izdüşümü örtüşen modülleri aynı sütuna koyar (bkz.
+# modul_sutun_bilgisi). L_BAGLANTI_ADET yalnız YEDEK: ayırıcı yüklenemez, hata
+# verir ya da hiç modül bulamazsa kullanılır; o durum JSON'da "moduller.kaynak"
+# = "yedek_sabit" olarak görünür.
+L_BAGLANTI_ADET = 2          # yedek: sipariş başına 2 L bağlantı seti (set+vida+dübel dahil)
 
 # ── Askılık flanşı (ağaç vidası üçgeninden tespit) ───────────────────────────
 # Bir parçadaki ağaç vidası deliklerinin 3'lü kombinasyonlarından kenarları
@@ -1060,10 +1086,56 @@ def prepare_unique_parts(meshes):
     return kept, removed
 
 
+# ── Modül sütunları → duvar bağlantı braketi (L Bağlantı Seti) ───────────────
+def modul_sutun_bilgisi(meshes):
+    """Modülleri geometriden ayır, sütunlara grupla, braket sayısını çıkar.
+
+    prepare_unique_parts()'tan SONRA, delik boolean'larından ÖNCE çağrılır (dünya
+    geometrisi el değmemiş olmalı). Parça adı kullanılmaz. Sahneyi değiştirmez.
+    Dönüş (JSON'a "moduller" olarak yazılır):
+      kaynak       "geometri" | "yedek_sabit"
+      braket       L Bağlantı Seti adedi (geometri: 2 × sütun; yedek: L_BAGLANTI_ADET)
+      modul_sayisi, sutun_sayisi, sutunlar ([[M01, M02], ...] alttan üste)
+      kutular      {modül: {"lo": [...], "hi": [...]}} mm
+      cozulemeyen_parca, ikiz_adayi  (ayırıcının belirsizlik göstergeleri)
+    """
+    bilgi = {"kaynak": "yedek_sabit", "braket": L_BAGLANTI_ADET, "modul_sayisi": 0,
+             "sutun_sayisi": 0, "sutunlar": [], "kutular": {}}
+    if module_segmenter is None:
+        bilgi["hata"] = f"module_ayirici yüklenemedi: {_MODUL_AYIRICI_HATA}"
+        return bilgi
+    try:
+        sonuc = module_segmenter.segment(meshes)
+    except Exception as e:
+        bilgi["hata"] = f"modül ayırma başarısız: {e!r}"
+        return bilgi
+    moduller = sonuc["modules"]
+    bilgi["cozulemeyen_parca"] = len(sonuc["unresolved"])
+    bilgi["ikiz_adayi"] = len(sonuc["twin_candidates"])
+    if not moduller:
+        bilgi["hata"] = "hiç modül (gövde) bulunamadı"
+        return bilgi
+    gruplar = sutunlar.sutunlari_bul(moduller)
+    bilgi.update(
+        kaynak="geometri",
+        braket=sutunlar.duvar_braketi_sayisi(len(gruplar)),
+        modul_sayisi=len(moduller),
+        sutun_sayisi=len(gruplar),
+        sutunlar=[[moduller[i]["id"] for i in g] for g in gruplar],
+        kutular={m["id"]: {"lo": [round(v, 1) for v in m["lo"]],
+                           "hi": [round(v, 1) for v in m["hi"]]} for m in moduller},
+    )
+    return bilgi
+
+
 # ── Sayım ────────────────────────────────────────────────────────────────────
 def count_order(order):
     meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH']
     meshes, duplicate_parts = prepare_unique_parts(meshes)
+    # Modül/sütun tespiti delik boolean'larından ÖNCE (geometri henüz el değmemiş).
+    modul_bilgisi = modul_sutun_bilgisi(meshes)
+    if modul_bilgisi["kaynak"] != "geometri":
+        print(f"  [UYARI] L Bağlantı Seti yedek sabite düştü: {modul_bilgisi.get('hata')}")
 
     counts = Counter()          # ham kategori sayıları
     kulp = 0
@@ -1188,7 +1260,7 @@ def count_order(order):
     frenli = parts_with_mentese
     frensiz = mentese_tabani - frenli
     raf_pimi = counts["rafpimi"] // 3     # her raf pimi = 3 delik
-    l_baglanti = L_BAGLANTI_ADET
+    l_baglanti = modul_bilgisi["braket"]    # 2 × sütun (yedek: L_BAGLANTI_ADET)
     # Ray'lerde kullanılan delik sayısı (RAY_DELIK_HACIMLERI havuzundan, agacvidasi
     # havuzuna hiç girmedi — ama ray varsa o rayların delikleri de birer vidayla
     # kapatıldığından, genel ağaç vidası adedinden düşülür).
@@ -1245,6 +1317,7 @@ def count_order(order):
         "gram": gram,
         "ray_setleri": ray_setleri,    # boy bazında ray seti adedi (ör. {"55cm": 2})
         "renk": siparis_rengi_belirle(order),  # None = renk json henüz yüklenmemiş
+        "moduller": modul_bilgisi,     # modül/sütun tespiti; L Bağlantı Seti buradan
         "_ham": dict(counts),          # doğrulama için (linco==pim beklenir)
         "_kulp": kulp,
         "_raylar": ray_isimleri,       # tespit edilen ray boyları (doğrulama için)
@@ -1294,6 +1367,9 @@ def main():
         yeni += 1
         print(f"   Sipariş {order}: {res['adet']} ")
         print(f"   [ham] {res['_ham']}  kulp={res['_kulp']}  uzunlinco={res['_uzun_linco']}")
+        mb = res["moduller"]
+        print(f"   [modül] {mb['modul_sayisi']} modül, {mb['sutun_sayisi']} sütun "
+              f"→ L Bağlantı Seti {mb['braket']} ({mb['kaynak']})")
         print(f"   >> {out_path}")
 
     _save_manifest(manifest)
