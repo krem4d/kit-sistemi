@@ -28,6 +28,14 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+# Askılık borusu hücre metni PDF ile aynı fonksiyondan (module_ayirici/askilik.py,
+# saf Python). Yüklenemezse kart eski düz adede düşer — panel durmaz.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "module_ayirici"))
+try:
+    import askilik
+except Exception:
+    askilik = None
+
 # ---------------------------------------------------------------- AYARLAR ---
 # Checklist artık sabit adımlar değil, siparişin KENDİ parçalarına göre otomatik
 # oluşur (bkz. parca_anahtarlari) — burada değiştirilecek bir liste yok.
@@ -178,6 +186,18 @@ def parca_anahtarlari(veri):
     anahtarlar = [k for k, v in (veri.get("adet") or {}).items() if v]
     anahtarlar += ["ray:" + str(k) for k, v in (veri.get("ray_setleri") or {}).items() if v]
     return anahtarlar
+
+
+def askilik_metni(veri):
+    """"Askılık Borusu" kart hücresi: '2 (96, 66 cm)' (pdf_uret.py ile aynı metin).
+    Boy listesi olmayan eski JSON'da ya da modül yüklenemezse None → kart düz adet."""
+    if askilik is None or not veri or "askilik_borulari" not in veri:
+        return None
+    try:
+        return askilik.pdf_hucre_metni((veri.get("adet") or {}).get("Askılık Borusu"),
+                                       veri.get("askilik_borulari")) or None
+    except Exception:
+        return None
 
 
 def checklist_degistir(no, parca, durum):
@@ -528,6 +548,7 @@ def durum_yaniti():
                 "pdf": k["pdf"], "ozet_no": k["ozet_no"], "zaman": k["zaman"],
                 "adet": veri.get("adet") or {}, "gram": veri.get("gram") or {},
                 "ray_setleri": veri.get("ray_setleri") or {},
+                "askilik_metni": askilik_metni(veri),
                 "checklist": checklist, "tamam": tamam, "toplam": toplam,
                 "not_metin": siparis_notu.get("metin") or "",
                 "not_zaman": siparis_notu.get("zaman"),
@@ -559,6 +580,7 @@ def siparis_yaniti(no, ham_goster=False):
         "no": no, "durum": k["durum"], "parca_sayisi": veri.get("parca_sayisi"),
         "adet": veri.get("adet") or {}, "gram": veri.get("gram") or {},
         "ray_setleri": veri.get("ray_setleri") or {},
+        "askilik_metni": askilik_metni(veri),
         "fbx": k["fbx"], "video": k["video"], "pdf": k["pdf"], "ozet_no": k["ozet_no"],
         "zaman": k["zaman"], "checklist": checklist, "tamam": tamam, "toplam": toplam,
         "renk": veri.get("renk"), "renk_dosya": k["renk_dosya"],
