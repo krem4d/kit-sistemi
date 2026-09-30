@@ -202,6 +202,26 @@ uygular. Kaynak türleri:
   ağaç vidası havuzu ray tespitinden bağımsızdır.
 - Sabitler `parca_sayim.py`: `RAY_SCALE_MM`, `RAY_TOL_MM`, `RAY_COLINEAR_TOL_MM`,
   `RAY_HOLE_POSITIONS`, `RAY_GAPS` (konumlardan türetilir).
+- **Hacimden bağımsız tanıma — çekmece yan duvarı (2026-09-30):** Ray vidası deliği,
+  18 mm panelden geçen Ø2.4–2.5 mm delik = ağaç vidası geçiş deliğiyle fiziksel olarak
+  aynı. Hacim modele göre değişiyor (79.7 / 80.8 / 83.75 / 84.9 / 87.7 mm³); 83.75
+  `agacvidasiTam` bandına düşüp ray yerine ağaç vidası sayılıyor, 87.7 ve 79.7 hiçbir
+  banda girmiyor → 22 siparişte ray hiç bulunmuyordu (1111, 8974-1, 9020, 9032-1, 9056,
+  9145, 9148, 9149, 9185-1, 9188, 9462, 9467, 9477, 9488-1/2, 9494, 9497-1/2/4, 9501,
+  9538, 9562). Kural: parçada **tam 2 linco** deliği varsa (`RAY_YAN_DUVAR_LINCO`),
+  iki yanal kenarı 2.3–2.6 mm, derinliği ≈ panel kalınlığı (±1.2 mm), hacmi 70–100 mm³
+  olan tüm delikler (`ray_gecis_deligi_mi`) hacme bakılmadan ray havuzuna girer; ayırt
+  edici olan yalnız imzadır. Ray'e giden `agacvidasiTam` delikleri ağaç vidası
+  havuzundan çıkar. **Linco şartı zorunlu:** şartsız, yan duvar/raf vidaları tesadüfen
+  imzaya uyuyor (8974-1, 9056, 9188'de yanlış ray).
+- **İmzasız kalan delik = yeni ray boyu:** yan duvarda imzaya uymayan geçiş deliği
+  kalırsa `[UYARI]` basılır ve JSON `_ray_uyari` dolar. Şu an: 9145 (aralıklar 192/225 mm;
+  2 delik 25cm'e uydu, 1 artık) ve 9232 (aralıklar 128/128 mm, parça yüksekliği 52 mm)
+  — tablo dışı ray boyları, Mert'ten konum ölçüsü gerekir.
+- **Ağaç vidasından ray deliği düşme kaldırıldı:** `RAY_DELIKLERI_VIDADAN_DUS = False`.
+  Ray delikleri vida havuzuna zaten girmiyordu; düşmek çifte çıkarmaydı ve ağaç vidası
+  eksiye düşürüyordu (9015: −10, 8974-1: −8, 9056: −14). Eski davranış için True.
+  Etki: 9363 46→52, 9364-1 30→42, 9313 38→44 (referans BoM'a yaklaşır).
 
 ### Askılık flanşı
 - **Kaynak:** geometri (ağaç vidası deliklerinden).

@@ -275,6 +275,25 @@ RAY_HOLE_POSITIONS = {
 RAY_GAPS = {name: [round(pos[i + 1] - pos[i], 1) for i in range(len(pos) - 1)]
             for name, pos in RAY_HOLE_POSITIONS.items()}
 
+# ── Çekmece yan duvarında ray deliği: HACİMDEN BAĞIMSIZ tanıma (2026-09-30) ──
+# Ray vidası deliği = 18 mm panelden geçen, Ø2.4–2.5 mm delik — ağaç vidası geçiş
+# deliğiyle (Ø2.46) fiziksel olarak AYNI şey. Hacim modele göre değişiyor
+# (tessellation/çap): 79.7 / 80.8 / 83.75 / 84.9 / 87.7 mm³. Bunların 83.75'i
+# agacvidasiTam bandına ([82.38, 84.04]) düşüyor → ray yerine ağaç vidası sayılıyor;
+# 87.7 ve 79.7 hiçbir banda girmiyor → ray hiç bulunmuyor (22 sipariş, bkz. Efforts log).
+# Bu yüzden çekmece yan duvarında (parçada TAM 2 linco deliği) geçiş delikleri hacme
+# bakılmadan ray havuzuna girer; ayırt edici olan ray İMZASI (RAY_GAPS). Linco şartı
+# şart: şartsız, yan duvar/raf vidaları tesadüfen imzaya uyup yanlış ray çıkarıyor
+# (8974-1, 9056, 9188'de ölçüldü).
+RAY_YAN_DUVAR_LINCO = 2          # çekmece yan duvarı imzası: parçada tam 2 linco deliği
+RAY_DELIK_CAP_MM = (2.3, 2.6)    # iki yanal bbox kenarı (mm)
+RAY_DELIK_DERINLIK_TOL_MM = 1.2  # derinlik ≈ panel kalınlığı (geçiş deliği)
+RAY_DELIK_HACIM_ARALIK = (70.0, 100.0)   # mm³ — geçiş deliği için sağduyu sınırı
+RAY_DELIKLERI_VIDADAN_DUS = False  # True = eski davranış: ray delik sayısı ağaç vidasından düşülür.
+                                   # Ray delikleri vida havuzuna HİÇ girmiyor (RAY bandı ayrı havuz, geçiş
+                                   # delikleri ray'e gidince havuzdan çıkarılıyor) → düşmek çifte çıkarmadır;
+                                   # 87.7 mm³ ailesinde ağaç vidası EKSİ çıkıyordu (8974-1: -8, 9056: -14).
+
 # ── Ayarlı ayak (4 ağaç vidası = sabit dikdörtgen) ──────────────────────────
 # Ölçüm (test_scriptleri/olcumler/iki_obje_mesafe_raporu.txt, Object_55): ayağın 4 vida deliği, kenarları ~32 ve ~40 mm,
 # köşegeni ~51.22 mm olan bir DİKDÖRTGEN oluşturur (4 delik hep aynı mesafelerde).
@@ -400,6 +419,22 @@ def is_ray_hole(vol):
         if hacim * (1 - RAY_DELIK_TOL) <= vol <= hacim * (1 + RAY_DELIK_TOL):
             return True
     return False
+
+
+def ray_gecis_deligi_mi(hole_obj, vol, kalinlik_mm):
+    """Çekmece yan duvarı ray deliği adayı mı? (hacim bandından bağımsız)
+
+    Ø2.3–2.6 mm iki yanal kenar + derinlik ≈ panel kalınlığı (geçiş deliği).
+    Tek başına ray KANITI değil; yalnız linco==2 parçada ve ray imzasıyla birlikte
+    anlamlı (bkz. RAY_YAN_DUVAR_LINCO)."""
+    if not (RAY_DELIK_HACIM_ARALIK[0] <= vol <= RAY_DELIK_HACIM_ARALIK[1]):
+        return False
+    dim, _ = get_perfect_local_bounds(hole_obj)
+    if dim is None or not kalinlik_mm:
+        return False
+    k = sorted((dim.x, dim.y, dim.z))
+    return (all(RAY_DELIK_CAP_MM[0] <= x <= RAY_DELIK_CAP_MM[1] for x in k[:2])
+            and abs(k[2] - kalinlik_mm) <= RAY_DELIK_DERINLIK_TOL_MM)
 
 
 def agac_vidasi_degisken_mi(hole_obj, vol):
@@ -1182,6 +1217,7 @@ def count_order(order):
     askilik_flansi = 0
     flanslar = []               # askılık flanşı konumları: {merkez, pano, modul, pano_lo, pano_hi} (mm)
     ray_isimleri = []           # tespit edilen ray boyları (ör. "55cm", "30cm")
+    ray_uyarilari = []          # imzasız kalan çekmece yan duvarı geçiş delikleri (teşhis)
     part_count = len(meshes)
 
     # Arkalık adaylarını (kalınlıktan) diğer parçalardan ayır. Paketleme için
@@ -1214,17 +1250,24 @@ def count_order(order):
         part_modul_centers = []
         part_linco_holes = []
         part_ray_centers = []
+        part_ray_adaylari = []      # geçiş deliği adayları: (merkez, agacvidasiTam mı?)
+        part_kalinlik = part_thickness(o)
         for h in holes:
             v = h["volume"]
             obj_part = h["object"]
             cat = match_category(v)
+            aday_c = None   # aynı Vector nesnesi hem ray adayı hem vida havuzunda (kimlik eşlemesi)
+            if (cat in (None, "agacvidasiTam") and not (cat is None and is_ray_hole(v))
+                    and part_kalinlik and ray_gecis_deligi_mi(obj_part, v, part_kalinlik)):
+                aday_c = world_center(obj_part)
+                part_ray_adaylari.append((aday_c, cat == "agacvidasiTam"))
             if cat == "modulbaglanti":
                 part_modul_centers.append(world_center(obj_part))
             elif cat in ("agacvidasi", "agacvidasiTam"):
                 # agacvidasiTam = karşıya çıkan ağaç vidası deliği; aynı havuz
                 if cat == "agacvidasiTam":
                     counts["_agacvida_tam"] += 1        # teşhis (JSON _ham)
-                part_agacvida_centers.append(world_center(obj_part))
+                part_agacvida_centers.append(aday_c if aday_c is not None else world_center(obj_part))
             elif cat == "linco":
                 counts["linco"] += 1
                 part_linco_holes.append(
@@ -1258,7 +1301,31 @@ def count_order(order):
         # RAY_DELIK_HACIMLERI) aranır — agacvidasi havuzuyla hiç KESİŞMEZ. Böylece
         # rastgele aralıklı gerçek ağaç vidaları artık ray sanılıp çalınamaz;
         # ayarlı ayak/ağaç vidası sayımı ray tespitinden tamamen bağımsızdır.
-        part_rays, _ray_disi = detect_rays(part_ray_centers)
+        if len(part_linco_holes) == RAY_YAN_DUVAR_LINCO and (part_ray_adaylari or part_ray_centers):
+            # Çekmece yan duvarı: geçiş delikleri hacme bakılmadan ray havuzuna girer
+            # (RAY-bandı delikleri zaten part_ray_centers'ta; adaylarla birleşir).
+            havuz = list(part_ray_centers) + [c for c, _ in part_ray_adaylari]
+            part_rays, ray_artik = detect_rays(havuz)
+            tam_merkezler = {id(c) for c, tam in part_ray_adaylari if tam}
+            artik_id = {id(c) for c in ray_artik}
+            kullanilan_tam = {id(c) for c in havuz
+                              if id(c) in tam_merkezler and id(c) not in artik_id}
+            if kullanilan_tam:
+                # ray'e giden agacvidasiTam delikleri ağaç vidası havuzundan çıkar
+                ayak_noktalari = [c for c in ayak_noktalari if id(c) not in kullanilan_tam]
+                ayak_disi = [c for c in ayak_disi if id(c) not in kullanilan_tam]
+            if ray_artik:
+                # imzasız kalan geçiş deliği = tanımsız ray boyu (Mert'ten yeni imza gerek)
+                ray_uyarilari.append({"parca": o.name, "artik_delik": len(ray_artik),
+                                      "bulunan": part_rays,
+                                      "artik_merkez_mm": [[round(c.x * MODEL_MM, 1),
+                                                           round(c.y * MODEL_MM, 1),
+                                                           round(c.z * MODEL_MM, 1)]
+                                                          for c in ray_artik]})
+                print(f"  [UYARI] {o.name}: çekmece yan duvarında {len(ray_artik)} geçiş deliği "
+                      f"ray imzasına uymadı (bulunan: {part_rays or 'yok'}) — yeni ray boyu olabilir")
+        else:
+            part_rays, _ray_disi = detect_rays(part_ray_centers)
         ray_isimleri.extend(part_rays)
         remaining_agacvida = ayak_noktalari + ayak_disi
         counts["agacvidasi"] += len(remaining_agacvida)
@@ -1309,7 +1376,8 @@ def count_order(order):
     # Ray'lerde kullanılan delik sayısı (RAY_DELIK_HACIMLERI havuzundan, agacvidasi
     # havuzuna hiç girmedi — ama ray varsa o rayların delikleri de birer vidayla
     # kapatıldığından, genel ağaç vidası adedinden düşülür).
-    ray_delik_toplam = sum(len(RAY_HOLE_POSITIONS[name]) for name in ray_isimleri)
+    ray_delik_toplam = (sum(len(RAY_HOLE_POSITIONS[name]) for name in ray_isimleri)
+                        if RAY_DELIKLERI_VIDADAN_DUS else 0)
     # Ağaç vidası = doğrudan hacimden sayılan delik sayısı + her L bağlantı seti
     # için 2 adet − ray'lerde kullanılan delik sayısı.
     agac_vidasi = counts["agacvidasi"] + 2 * l_baglanti - ray_delik_toplam
@@ -1384,6 +1452,7 @@ def count_order(order):
         "_ham": dict(counts),          # doğrulama için (linco==pim beklenir)
         "_kulp": kulp,
         "_raylar": ray_isimleri,       # tespit edilen ray boyları (doğrulama için)
+        "_ray_uyari": ray_uyarilari,   # imzasız kalan yan duvar geçiş delikleri (boşsa sorun yok)
         "_uzun_linco": uzun_linco_pim, # birbirine dayalı linco çifti sayısı
     }
 
