@@ -28,8 +28,8 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-# Askılık borusu hücre metni PDF ile aynı fonksiyondan (module_ayirici/askilik.py,
-# saf Python). Yüklenemezse kart eski düz adede düşer — panel durmaz.
+# Askılık borusu boy satırları PDF ile aynı fonksiyondan (module_ayirici/askilik.py,
+# saf Python). Yüklenemezse kart eski düz adet satırına düşer — panel durmaz.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "module_ayirici"))
 try:
     import askilik
@@ -180,22 +180,28 @@ def not_degistir(no, metin):
 def parca_anahtarlari(veri):
     """Bir siparişin işaretlenebilir parça anahtarları: nonzero `adet` anahtarları +
     nonzero `ray_setleri` anahtarları (çakışmayı önlemek için "ray:" önekiyle).
+    Boy listesi olan siparişte "Askılık Borusu" yerine boy başına "boru:<boy>"
+    anahtarları gelir ("boru:96", "boru:?").
     Tek doğruluk kaynağı: hem checklist doğrulamasında hem özetinde kullanılır."""
     if not veri:
         return []
-    anahtarlar = [k for k, v in (veri.get("adet") or {}).items() if v]
+    boylar = askilik_boylari(veri)
+    anahtarlar = [k for k, v in (veri.get("adet") or {}).items()
+                  if v and not (boylar is not None and k == "Askılık Borusu")]
     anahtarlar += ["ray:" + str(k) for k, v in (veri.get("ray_setleri") or {}).items() if v]
+    anahtarlar += ["boru:" + boy for boy, _ in (boylar or [])]
     return anahtarlar
 
 
-def askilik_metni(veri):
-    """"Askılık Borusu" kart hücresi: '2 (96, 66 cm)' (pdf_uret.py ile aynı metin).
-    Boy listesi olmayan eski JSON'da ya da modül yüklenemezse None → kart düz adet."""
+def askilik_boylari(veri):
+    """Askılık Borusu boy satırları [["96", 2], ["?", 1]] (pdf_uret.py ile aynı
+    fonksiyon). Boy listesi olmayan eski JSON'da ya da modül yüklenemezse None →
+    kart eski düz "Askılık Borusu" satırını gösterir."""
     if askilik is None or not veri or "askilik_borulari" not in veri:
         return None
     try:
-        return askilik.pdf_hucre_metni((veri.get("adet") or {}).get("Askılık Borusu"),
-                                       veri.get("askilik_borulari")) or None
+        return [list(r) for r in askilik.boy_satirlari(
+            (veri.get("adet") or {}).get("Askılık Borusu"), veri.get("askilik_borulari"))]
     except Exception:
         return None
 
@@ -548,7 +554,7 @@ def durum_yaniti():
                 "pdf": k["pdf"], "ozet_no": k["ozet_no"], "zaman": k["zaman"],
                 "adet": veri.get("adet") or {}, "gram": veri.get("gram") or {},
                 "ray_setleri": veri.get("ray_setleri") or {},
-                "askilik_metni": askilik_metni(veri),
+                "askilik_boylari": askilik_boylari(veri),
                 "checklist": checklist, "tamam": tamam, "toplam": toplam,
                 "not_metin": siparis_notu.get("metin") or "",
                 "not_zaman": siparis_notu.get("zaman"),
@@ -580,7 +586,7 @@ def siparis_yaniti(no, ham_goster=False):
         "no": no, "durum": k["durum"], "parca_sayisi": veri.get("parca_sayisi"),
         "adet": veri.get("adet") or {}, "gram": veri.get("gram") or {},
         "ray_setleri": veri.get("ray_setleri") or {},
-        "askilik_metni": askilik_metni(veri),
+        "askilik_boylari": askilik_boylari(veri),
         "fbx": k["fbx"], "video": k["video"], "pdf": k["pdf"], "ozet_no": k["ozet_no"],
         "zaman": k["zaman"], "checklist": checklist, "tamam": tamam, "toplam": toplam,
         "renk": veri.get("renk"), "renk_dosya": k["renk_dosya"],

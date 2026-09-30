@@ -236,14 +236,17 @@ uygular. Kaynak türleri:
 - **JSON:** `askilik_borulari` = `[{uzunluk_cm, modul, eksen, ham_mm, eksen_boslugu_mm,
   flanslar, panolar}]` (büyükten küçüğe); `askilik_eslesme` = `{flans, eslesen_boru,
   beklenen_boru, tutarli, eslesmeyen_flanslar}`.
-- **PDF:** "Askılık Borusu" hücresi `2 (96, 66 cm)`; aynı boy tekrarında `3 (2×96, 66 cm)`,
-  boyu bilinmeyen `?`. Boy başına satır açılmaz (boylar siparişten siparişe çok
-  değişir, özet tablo şişerdi). Eski (alan içermeyen) JSON'larda hücre düz adettir.
+- **PDF + panel (Kerem, 2026-09-30):** her boy ayrı parça satırı: "Askılık Borusu 96 cm"
+  → o boydaki adet; boyu bulunamayanlar "Askılık Borusu ? cm" satırında. Satır toplamı
+  her zaman `adet["Askılık Borusu"]`. Özet tabloda satırlar (Ray Seti gibi) o sayfadaki
+  siparişlerde geçen boylardan kurulur. Panel checklist anahtarı `boru:<boy>`
+  (`boru:96`, `boru:?`). Eski (`askilik_borulari` içermeyen) JSON'lar düz
+  "Askılık Borusu" satırında adetle kalır.
 - **Bilinen FBX eksiği:** bazı siparişlerde flanş vida delikleri yalnız bir duvarda
   modellenmiş (ör. 9259-2: sol duvarda 2 flanş, sağ duvarda hiç delik yok; FBX'te 2
   boru mesh'i var). Bu siparişlerde hem adet (flanş // 2) eksik çıkar hem boy bulunamaz.
 - Kod: `module_ayirici/askilik.py` (saf Python; `eslestir`, `boru_boyu_cm`,
-  `pdf_hucre_metni`), `parca_sayim.find_equilateral_flanges`. Testler:
+  `boy_satirlari`), `parca_sayim.find_equilateral_flanges`. Testler:
   `python3 tests/test_askilik.py`, Blender `tests/test_askilik_blender.py`, korpus
   `tests/askilik_korpus.py` + `tests/askilik_korpus_karsilastir.py`.
 

@@ -140,9 +140,11 @@ Each cavity's volume is matched to a category (`match_category`) within `TOLERAN
   half-up to whole cm (`floor(x+0.5)`, not `round`). JSON: `askilik_borulari` (per
   rod) + `askilik_eslesme` (consistency; unpaired flanges with reason). Count is never
   changed by pairing; a mismatch sets `tutarli=false` + prints `[UYARI]`, and the PDF
-  shows `?` for rods without a length. PDF cell: `2 (96, 66 cm)`; the panel card shows the
-  same text (`panel.py` `askilik_metni()` → API field `askilik_metni`, same
-  `askilik.pdf_hucre_metni`; old JSONs without `askilik_borulari` → plain count). Known FBX gap: some
+  puts rods without a length on a `?` row. PDF + panel show one row per length
+  ("Askılık Borusu 96 cm" → count; "Askılık Borusu ? cm" for unknown), rows sum to
+  `adet["Askılık Borusu"]` (`askilik.boy_satirlari`; `pdf_uret.boru_rows`; `panel.py`
+  `askilik_boylari()` → API field `askilik_boylari`, checklist keys `boru:<boy>`);
+  old JSONs without `askilik_borulari` → one plain "Askılık Borusu" count row. Known FBX gap: some
   orders model the flange screw holes on one wall only (e.g. 9259-2). Tests:
   `python3 tests/test_askilik.py`, Blender `tests/test_askilik_blender.py`, corpus
   `tests/askilik_korpus.py` + `tests/askilik_korpus_karsilastir.py`.

@@ -162,19 +162,21 @@ def ozet(borular, eslesmeyenler, flans_adedi):
     )
 
 
-def pdf_hucre_metni(adet, borular):
-    """PDF hücresi: '2 (96, 66 cm)'. Aynı boy tekrarlanırsa '3 (2×96, 66 cm)';
-    boyu bulunamayan borular '?' ile gösterilir ('1 (? cm)'). adet 0 → '' (boş hücre).
-    Eşleşen çift adetten fazlaysa (beklenmez) bütün boylar yazılır; uyuşmazlık
-    JSON'da askilik_eslesme.tutarli = false ile görünür."""
+BILINMEYEN_BOY = "?"   # boyu bulunamayan boruların satır etiketi
+
+
+def boy_satirlari(adet, borular):
+    """Askılık Borusu'nu boy başına satırlara böler (PDF + panel):
+    [("96", 2), ("66", 1), ("?", 1)] → "Askılık Borusu 96 cm — 2 adet" vb.
+    Büyükten küçüğe; boyu bulunamayan borular (adet − eşleşen boru) en sonda
+    BILINMEYEN_BOY satırında. Satır toplamı her zaman `adet`tir (JSON
+    adet["Askılık Borusu"]); her çift 2 flanş kullandığından eşleşen boru adedi
+    flanş // 2'yi aşamaz. adet 0/None → [] (satır yok)."""
     if not adet:
-        return ""
-    boylar = sorted((b["uzunluk_cm"] for b in (borular or [])), reverse=True)
-    parcalar = []
-    for L in sorted(set(boylar), reverse=True):
-        n = boylar.count(L)
-        parcalar.append(f"{n}×{L}" if n > 1 else str(L))
+        return []
+    boylar = [b["uzunluk_cm"] for b in (borular or [])]
+    satirlar = [(str(L), boylar.count(L)) for L in sorted(set(boylar), reverse=True)]
     eksik = adet - len(boylar)
     if eksik > 0:
-        parcalar.append(f"{eksik}×?" if eksik > 1 else "?")
-    return f"{adet} ({', '.join(parcalar)} cm)"
+        satirlar.append((BILINMEYEN_BOY, eksik))
+    return satirlar

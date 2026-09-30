@@ -22,10 +22,9 @@ import sys
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.textpath import TextPath
 
-# Askılık borusu hücre metni module_ayirici/askilik.py'de (saf Python, test edilir).
-# Yüklenemezse hücre eski düz adede düşer — PDF üretimi durmaz.
+# Askılık borusu boy satırları module_ayirici/askilik.py'de (saf Python, test edilir).
+# Yüklenemezse tek düz "Askılık Borusu" adet satırına düşer — PDF üretimi durmaz.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "module_ayirici"))
 try:
     import askilik
@@ -76,14 +75,12 @@ ROWS = [
 # Ray Seti satırları buradan SONRA (boy bazında dinamik) eklenir.
 RAY_INSERT_AFTER = "L Bağlantı Seti"
 
-# Askılık Borusu hücresi adet + kesim boyları: "2 (96, 66 cm)", "3 (2×96, 66 cm)";
-# boyu bulunamayan boru "?" (JSON askilik_borulari). Boylar siparişten siparişe
-# çok değiştiği için Ray Seti gibi boy başına satır açılmaz (özet tablo şişerdi).
-# Bu anahtar olmayan eski JSON'larda hücre eskisi gibi düz adettir.
+# Askılık Borusu boy başına ayrı satır (Kerem, 2026-09-30): "Askılık Borusu 96 cm"
+# satırında o boydaki boru adedi; boyu bulunamayanlar "Askılık Borusu ? cm"
+# satırında. Satırlar Ray Seti gibi tablodaki siparişlerde geçen boylardan kurulur;
+# satır toplamı adet["Askılık Borusu"]. askilik_borulari alanı olmayan eski JSON'lar
+# düz "Askılık Borusu" satırında adetle kalır.
 ASKILIK_BORUSU_KEY = "Askılık Borusu"
-# Özet tabloda dar sütuna sığmayan boru hücresinin yazısı küçültülür (en az bu punto).
-HUCRE_MIN_PUNTO = 4.5
-HUCRE_DOLULUK = 0.90         # yazı, sütun genişliğinin en fazla bu oranını kaplasın
 
 # ağırlıklı satır (adet anahtarı) → JSON gram anahtarı
 GRAM_KEY = {
@@ -115,9 +112,13 @@ def cell_value(d, key):
     # Sipariş Rengi satırı: renk json henüz yüklenmemişse boş (fmt(None)'la aynı davranış)
     if key == "__renk__":
         return (d.get("renk") or {}).get("siparis_rengi") or ""
-    # Askılık Borusu: adet + kesim boyları (boy listesi yoksa eski düz adet)
-    if key == ASKILIK_BORUSU_KEY and askilik is not None and "askilik_borulari" in d:
-        return askilik.pdf_hucre_metni(d["adet"].get(key), d.get("askilik_borulari"))
+    # Askılık Borusu boy satırı: key = ("boru", "96") → o boydaki boru adedi
+    if isinstance(key, tuple) and key[0] == "boru":
+        return fmt(dict(boru_satirlari(d) or []).get(key[1], 0))
+    # Düz "Askılık Borusu" satırı yalnız boy listesi olmayan (eski) JSON'lar içindir;
+    # boy listesi olan siparişin boruları boy satırlarında, burada tekrar sayılmaz.
+    if key == ASKILIK_BORUSU_KEY and boru_satirlari(d) is not None:
+        return ""
     s = fmt(d["adet"].get(key))
     if s == "":          # adet 0/None → hücre tamamen boş ("/ gram" da yazma)
         return ""
@@ -137,6 +138,36 @@ def _cm(label):
     return int("".join(ch for ch in label if ch.isdigit()) or 0)
 
 
+def boru_satirlari(d):
+    """Siparişin askılık borusu boy satırları [("96", 2), ("?", 1)]; eski JSON
+    (askilik_borulari yok) ya da askilik modülü yüklenemediyse None."""
+    if askilik is None or "askilik_borulari" not in d:
+        return None
+    return askilik.boy_satirlari(d["adet"].get(ASKILIK_BORUSU_KEY), d.get("askilik_borulari"))
+
+
+def _boru_sirasi(boy):
+    """"96" → büyükten küçüğe; "?" en sonda."""
+    return (1, 0) if boy == askilik.BILINMEYEN_BOY else (0, -int(boy))
+
+
+def boru_rows(order_keys, data):
+    """Tablodaki siparişlerin Askılık Borusu satırları: geçen her boy için bir satır,
+    eski JSON'u olan sipariş varsa düz satır; hiç boru yoksa tek boş düz satır."""
+    boylar, duz = set(), False
+    for k in order_keys:
+        satirlar = boru_satirlari(data[k])
+        if satirlar is None:
+            duz = duz or bool(data[k]["adet"].get(ASKILIK_BORUSU_KEY))
+        else:
+            boylar.update(boy for boy, _ in satirlar)
+    rows = [(f"{ASKILIK_BORUSU_KEY} {boy} cm", ("boru", boy))
+            for boy in sorted(boylar, key=_boru_sirasi)]
+    if duz or not rows:
+        rows.append((ASKILIK_BORUSU_KEY, ASKILIK_BORUSU_KEY))
+    return rows
+
+
 def ray_labels(order_keys, data):
     """Verilen siparişlerde geçen ray boylarını (büyükten küçüğe) döndürür."""
     lengths = set()
@@ -153,6 +184,9 @@ def build_rows(order_keys, data):
     rays = ray_labels(order_keys, data)
     rows = []
     for disp, key in ROWS:
+        if key == ASKILIK_BORUSU_KEY:
+            rows.extend(boru_rows(order_keys, data))
+            continue
         rows.append((disp, key))
         if disp == RAY_INSERT_AFTER:
             if rays:
@@ -224,7 +258,7 @@ def _draw_table(ax, order_keys, data, fontsize):
     tbl.set_fontsize(fontsize)
 
     ncol = len(col_labels)
-    w0 = 0.34 if ncol <= 2 else 0.24
+    w0 = 0.40 if ncol <= 2 else 0.24   # tek sipariş: "Askılık Borusu 75 cm" sığsın
     wrest = (1 - w0) / (ncol - 1)
     for (r, c), cell in tbl.get_celld().items():
         cell.set_width(w0 if c == 0 else wrest)
@@ -239,22 +273,6 @@ def _draw_table(ax, order_keys, data, fontsize):
                 cell.set_text_props(fontweight="bold")
             elif r % 2 == 0:
                 cell.set_facecolor("#f4f7f9")
-
-    # Askılık Borusu hücresi boy listesiyle uzayabilir: sütuna sığmıyorsa yazıyı
-    # küçült (yalnız bu satır; diğer hücrelerin görünümü değişmez).
-    col_pt = ax.get_position().width * ax.figure.get_figwidth() * 72 * wrest
-    for r, (disp, key) in enumerate(row_defs, start=1):
-        if key != ASKILIK_BORUSU_KEY:
-            continue
-        for c in range(1, ncol):
-            metin = cell_rows[r - 1][c]
-            if not metin:
-                continue
-            # yazının gerçek genişliği (punto), varsayılan yazı tipiyle ölçülür
-            gerekli = TextPath((0, 0), metin, size=fontsize).get_extents().width
-            if gerekli > col_pt * HUCRE_DOLULUK:
-                punto = max(HUCRE_MIN_PUNTO, fontsize * col_pt * HUCRE_DOLULUK / gerekli)
-                tbl[r, c].get_text().set_fontsize(punto)
 
 
 def render_order(path, k, data):

@@ -818,7 +818,7 @@ function notImzaParcasi(no){
   return m ? (m.metin + '@' + (m.zaman || '')) : '';
 }
 function siparisImza(o){
-  return [o.durum, o.pdf?1:0, o.ozet_no??'', dictImza(o.adet), dictImza(o.gram), dictImza(o.ray_setleri), o.askilik_metni||'', checklistImzaParcasi(o.no), notImzaParcasi(o.no),
+  return [o.durum, o.pdf?1:0, o.ozet_no??'', dictImza(o.adet), dictImza(o.gram), dictImza(o.ray_setleri), JSON.stringify(o.askilik_boylari||null), checklistImzaParcasi(o.no), notImzaParcasi(o.no),
           (o.fbx||[]).map(f=>f.ad+':'+f.boyut).join(','), o.video ? o.video.ad+':'+o.video.boyut : '',
           o.renk_dosya ? o.renk_dosya.ad+':'+o.renk_dosya.boyut : '', o.renk ? o.renk.siparis_rengi : ''].join('|');
 }
@@ -833,9 +833,14 @@ function parcaSatirlari(o){
   const satirlar = [];
   for (const [etiket, anahtar] of ROWS){
     if (!adet[anahtar]) continue;
-    /* Askılık Borusu: sunucu PDF ile aynı metni verir ('2 (96, 66 cm)'); eski JSON → düz adet */
-    const deger = (anahtar === "Askılık Borusu" && o.askilik_metni) ? o.askilik_metni : fmtSayi(adet[anahtar]);
-    satirlar.push({key:anahtar, etiket, deger,
+    /* Askılık Borusu: boy başına ayrı satır ("Askılık Borusu 96 cm" — 2); satırları
+       sunucu PDF ile aynı fonksiyondan verir. Eski JSON (askilik_boylari null) → düz adet. */
+    if (anahtar === "Askılık Borusu" && Array.isArray(o.askilik_boylari)){
+      for (const [boy, n] of o.askilik_boylari)
+        satirlar.push({key:'boru:'+boy, etiket:'Askılık Borusu '+boy+' cm', deger:fmtSayi(n), gram:'', tartili:false});
+      continue;
+    }
+    satirlar.push({key:anahtar, etiket, deger:fmtSayi(adet[anahtar]),
                    gram:gramDeger(gram,anahtar), tartili:TARTILAN.has(anahtar)});
     if (etiket === RAY_INSERT_AFTER){
       const rayAnahtarlari = Object.keys(ray).filter(k=>ray[k]).sort((a,b)=>parseInt(b,10)-parseInt(a,10));

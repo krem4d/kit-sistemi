@@ -159,15 +159,18 @@ class OzetVePdfTestleri(unittest.TestCase):
         self.assertFalse(o["tutarli"])
         self.assertTrue(askilik.ozet([], [], 0)["tutarli"])
 
-    def test_pdf_hucre(self):
+    def test_boy_satirlari(self):
         b = lambda *ls: [{"uzunluk_cm": L} for L in ls]  # noqa: E731
-        self.assertEqual(askilik.pdf_hucre_metni(0, []), "")
-        self.assertEqual(askilik.pdf_hucre_metni(None, []), "")
-        self.assertEqual(askilik.pdf_hucre_metni(2, b(66, 96)), "2 (96, 66 cm)")
-        self.assertEqual(askilik.pdf_hucre_metni(3, b(96, 66, 96)), "3 (2×96, 66 cm)")
-        self.assertEqual(askilik.pdf_hucre_metni(2, b(96)), "2 (96, ? cm)")
-        self.assertEqual(askilik.pdf_hucre_metni(1, []), "1 (? cm)")
-        self.assertEqual(askilik.pdf_hucre_metni(3, []), "3 (3×? cm)")
+        self.assertEqual(askilik.boy_satirlari(0, []), [])
+        self.assertEqual(askilik.boy_satirlari(None, []), [])
+        self.assertEqual(askilik.boy_satirlari(4, b(73, 73, 73, 73)), [("73", 4)])
+        self.assertEqual(askilik.boy_satirlari(2, b(66, 96)), [("96", 1), ("66", 1)])
+        self.assertEqual(askilik.boy_satirlari(3, b(96, 66, 96)), [("96", 2), ("66", 1)])
+        self.assertEqual(askilik.boy_satirlari(2, b(96)), [("96", 1), ("?", 1)])
+        self.assertEqual(askilik.boy_satirlari(3, []), [("?", 3)])
+        # satır toplamı her zaman adet
+        for adet, bor in [(4, b(73, 73, 73, 73)), (3, b(96)), (2, b(75, 65)), (1, [])]:
+            self.assertEqual(sum(n for _, n in askilik.boy_satirlari(adet, bor)), adet)
 
 
 if __name__ == "__main__":
