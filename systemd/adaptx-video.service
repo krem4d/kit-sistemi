@@ -1,0 +1,10 @@
+[Unit]
+Description=Adaptx Otonom Kit — Drive montaj videosu envanteri (indirmeden)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Kurulu kopya; repodaki video_envanter.sh değişince buraya kopyala.
+ExecStart=/usr/bin/bash /usr/local/bin/video_envanter.sh
+TimeoutStartSec=120

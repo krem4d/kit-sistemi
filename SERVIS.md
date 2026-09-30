@@ -64,6 +64,27 @@ journalctl -u adaptx.service -f         # canlı log
 
 ---
 
+## 6) Video envanteri (15 sn'de bir, indirmeden)
+
+Drive'a yüklenen montaj videosunun panele hızlı düşmesi için ayrı küçük betik +
+timer. Betik yalnız "hangi siparişin videosu var" listesini çıkarır (tek
+`--fast-list` taraması, ~5 sn); video indirilmez. `fbx_indir.sh` de her turun
+başında aynı betiği yedek olarak çağırır, bu yüzden ikisi aynı klasörde olmalı.
+
+```bash
+cd /opt/adaptx && git pull
+install -m 755 fbx_indir.sh     /usr/local/bin/fbx_indir.sh
+install -m 755 video_envanter.sh /usr/local/bin/video_envanter.sh
+cp systemd/adaptx-video.service systemd/adaptx-video.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now adaptx-video.timer
+systemctl restart adaptx-panel          # panel.py değiştiyse (panel.html kendiliğinden yeniden yüklenir)
+systemctl list-timers adaptx-video.timer
+journalctl -u adaptx-video.service -n 20   # yalnız envanter değişince satır basar
+```
+
+---
+
 ## Yol uyumu (önemli)
 
 rclone'un FBX'leri indirdiği klasör ile servisin taradığı klasör **aynı** olmalı:

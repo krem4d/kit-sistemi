@@ -153,10 +153,13 @@ yüklenmemişse buton hiç gösterilmez), **Video** (montaj videosunu tarayıcı
 oynatır). Videosu olmayan siparişte sönük bir "Video yok" göstergesi durur;
 böylece Drive'a videosu yüklenmemiş siparişler panelden tek bakışta görülür.
 
-Videolar **diske indirilmez**: `fbx_indir.sh` her dakikalık turunda Drive
-giriş klasöründeki `<sipariş_no>.mp4` dosyalarının yalnızca ENVANTERİNİ
-(`video_envanteri.json`, atomik yazım) çıkarır; "Video var/yok" göstergesi
-bu dosyadan gelir, panel Drive'a sorgu atmaz. Oynatma anında ise video
+Videolar **diske indirilmez**: `video_envanter.sh` (kendi timer'ı
+`adaptx-video.timer`, 15 sn'de bir; `fbx_indir.sh` de her turun başında yedek
+olarak çağırır) Drive giriş klasöründeki `<sipariş_no>.mp4` dosyalarının yalnızca
+ENVANTERİNİ (`video_envanteri.json`, atomik yazım, içerik değişmediyse yazılmaz,
+boş liste gelirse eski korunur) tek bir `--fast-list` taramasıyla (~5 sn) çıkarır;
+yeni video panele ~20 sn içinde düşer (panel görünürken 10 sn'de bir yenilenir).
+"Video var/yok" göstergesi bu dosyadan gelir, panel Drive'a sorgu atmaz. Oynatma anında ise video
 Drive'dan **doğrudan akıtılır**: sunucu HTTP Range isteğini
 `rclone cat --offset/--count`e çevirir (sarma/atlama çalışır), veri diske
 yazılmadan tarayıcıya geçer; eşzamanlı akış sayısı 3 ile sınırlıdır
@@ -205,6 +208,7 @@ başlar — kanıt kaybolmaz, `data/` klasörüne bakıp elle kurtarabilirsin.
 panel `ADAPTX_BASE=/opt/adaptx` altındaki `fbx/`, `renkler/`, `jsons/`, `pdf/`,
 `videolar/`, `islem_gecmisi.json`'u okur. Farklı bir yola kurulursa
 `adaptx-panel.service` içindeki `ADAPTX_BASE`'i (ve `ReadWritePaths`'i) ona göre
-güncelle. `renkler/`'i (ve `video_envanteri.json`'u) yazan `fbx_indir.sh`'ın
-kurulu kopyası `/usr/local/bin/fbx_indir.sh`'tır (cron, her dakika); repodaki
-kopya referanstır.
+güncelle. `renkler/`'i yazan `fbx_indir.sh`'ın kurulu kopyası
+`/usr/local/bin/fbx_indir.sh`'tır (cron, her dakika); `video_envanteri.json`'u
+yazan `video_envanter.sh`'ın kurulu kopyası `/usr/local/bin/video_envanter.sh`
+(`adaptx-video.timer`, SERVIS.md). Repodaki kopyalar referanstır.

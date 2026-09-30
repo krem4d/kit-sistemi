@@ -1327,7 +1327,10 @@ document.getElementById('altbilgi').textContent = 'kit-sistemi · ' + location.h
 
 temaBaslat();
 odakUygula(false);
-setInterval(yenile, 30000);
+/* 10 sn: yeni video/sipariş çabuk görünsün (eskiden 30 sn). Sekme arka plandayken
+   sorgu atılmaz; sekmeye dönünce visibilitychange hemen yeniler. Sunucu tarafı
+   SIPARIS_TTL (3 sn) önbellekli, yük artışı önemsiz. */
+setInterval(() => { if (!document.hidden) yenile(); }, 10000);
 yenile();
 </script>
 </body>

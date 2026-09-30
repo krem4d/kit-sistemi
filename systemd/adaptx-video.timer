@@ -1,0 +1,13 @@
+[Unit]
+Description=Adaptx Otonom Kit — 15 saniyede bir video envanteri
+
+[Timer]
+# Açılıştan 30 sn sonra ilk tarama, sonra her taramanın BİTİŞİNDEN 15 sn sonra
+# (OnUnitInactiveSec) — taramalar çakışmaz. Tarama ~5 sn → yeni video panele
+# en geç ~20 sn içinde düşer.
+OnBootSec=30s
+OnUnitInactiveSec=15s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target
