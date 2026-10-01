@@ -13,6 +13,7 @@ Parola (ops.): PANEL_KULLANICI + PANEL_SIFRE ortam değişkenleri ikisi de
 setliyse HTTP Basic Auth zorunlu olur; boşsa panel açıktır (LAN kullanımı).
 """
 import base64
+import gzip
 import hmac
 import json
 import os
@@ -59,6 +60,21 @@ DATA_DIR = os.path.join(BASE, "data")
 CHECKLIST_DOSYA = os.path.join(DATA_DIR, "panel_checklist.json")
 NOTLAR_DOSYA = os.path.join(DATA_DIR, "panel_notlar.json")
 SAYFA_DOSYA = os.path.join(BASE, "panel.html")
+STATIC_DIR = os.path.join(BASE, "static")  # arayüz varlıkları: parça renderları, logo, fontlar, three.js
+# Beyaz liste: bilinmeyen uzantı 404. mimetypes'a güvenilmez (.js bazı sistemlerde
+# application/javascript döner; ES modülleri/importmap sıkı MIME denetimi yapar).
+STATIC_MIME = {
+    ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
+    ".webp": "image/webp", ".svg": "image/svg+xml", ".woff2": "font/woff2",
+    ".glb": "model/gltf-binary", ".ico": "image/x-icon",
+}
+# gzip: /api/durum her 10 sn'de ~126 KB (101 sipariş) iner, gzip ile ~7 KB; metin statikleri de (.js/.css/.json/.svg) sıkıştırılır.
+# Standart kütüphane (bağımlılık yok); sıkıştırılmış gövde bellekte tutulur, aynı içerik tekrar sıkıştırılmaz.
+GZIP_ESIK = 1024
+GZIP_TURLER = (".js", ".mjs", ".css", ".json", ".svg")
+_gz_json = {"son": (None, None)}          # (gövde, sıkıştırılmışı): tek atama = iş parçacıkları arasında tutarlı
+_gz_statik = {}                           # (yol, mtime_ns, boyut) -> sıkıştırılmış bayt
 RCLONE_ERR = "/var/log/adaptx_fbx_indir.err"
 
 ORDER_RX = re.compile(r"^\d{4,}(?:-\d+)?$")      # URL'deki sipariş no doğrulaması
@@ -630,11 +646,14 @@ class PanelIstek(BaseHTTPRequestHandler):
         yol = self.path.split("?", 1)[0]
         if str(code).startswith(("2", "3")) and (
                 yol in ("/api/durum", "/saglik", "/favicon.ico")
-                or yol.startswith("/video/")):  # sarma/atlama başına bir 206 düşer
-            return
+                or yol.startswith(("/video/", "/static/"))):
+            return  # video: sarma/atlama başına bir 206; static: sayfa başına onlarca dosya
         BaseHTTPRequestHandler.log_request(self, code, size)
 
     # --- yanıt yardımcıları
+    def _gzip_kabul(self):
+        return "gzip" in (self.headers.get("Accept-Encoding") or "").lower()
+
     def _gonder(self, kod, govde, ctype, ek=None):
         self.send_response(kod)
         self.send_header("Content-Type", ctype)
@@ -648,9 +667,19 @@ class PanelIstek(BaseHTTPRequestHandler):
 
     def _json(self, kod, nesne):
         govde = json.dumps(nesne, ensure_ascii=False).encode("utf-8")
-        self._gonder(kod, govde, "application/json; charset=utf-8")
+        ek = None
+        if len(govde) >= GZIP_ESIK:
+            ek = {"Vary": "Accept-Encoding"}
+            if self._gzip_kabul():
+                ham, sik = _gz_json["son"]
+                if ham != govde:   # bayt eşitliği memcmp: aynı durum tekrar sıkıştırılmaz
+                    sik = gzip.compress(govde, compresslevel=5)
+                    _gz_json["son"] = (govde, sik)
+                govde = sik
+                ek["Content-Encoding"] = "gzip"
+        self._gonder(kod, govde, "application/json; charset=utf-8", ek)
 
-    def _dosya(self, yol, kok, ctype, indirme_adi, inline=True):
+    def _dosya(self, yol, kok, ctype, indirme_adi, inline=True, dogrula=False):
         """kok dizini içindeki bir dosyayı akıtarak sun. HTTP Range destekler
         (video sarma/atlama için şart; MemoryMax=256M altında 60MB'lık mp4'ü
         belleğe almadan 64KB'lık parçalarla yazar)."""
@@ -662,7 +691,18 @@ class PanelIstek(BaseHTTPRequestHandler):
         except OSError:
             return self._json(404, {"hata": "dosya bulunamadı"})
         with f:
-            boyut = os.fstat(f.fileno()).st_size
+            st = os.fstat(f.fileno())
+            boyut = st.st_size
+            etag = None
+            if dogrula:
+                # Büyük FBX her açılışta (no-store) baştan iniyordu. ETag + must-revalidate: dosya değişmediyse 304 (gövde yok).
+                etag = '"%x-%x"' % (st.st_mtime_ns, st.st_size)
+                if self.headers.get("If-None-Match") == etag and not self.headers.get("Range"):
+                    self.send_response(304)
+                    self.send_header("ETag", etag)
+                    self.send_header("Cache-Control", "private, max-age=0, must-revalidate")
+                    self.end_headers()
+                    return
             bas, son, kod = 0, boyut - 1, 200
             m = re.fullmatch(r"bytes=(\d*)-(\d*)", (self.headers.get("Range") or "").strip())
             if m and (m.group(1) or m.group(2)) and boyut > 0:
@@ -692,7 +732,11 @@ class PanelIstek(BaseHTTPRequestHandler):
             dispo = "inline" if inline else "attachment"
             self.send_header("Content-Disposition",
                              f'{dispo}; filename="{ascii_ad}"; filename*=UTF-8\'\'{utf8_ad}')
-            self.send_header("Cache-Control", "no-store")
+            if etag:
+                self.send_header("ETag", etag)
+                self.send_header("Cache-Control", "private, max-age=0, must-revalidate")
+            else:
+                self.send_header("Cache-Control", "no-store")
             self.end_headers()
             if self.command == "HEAD":
                 return
@@ -704,6 +748,74 @@ class PanelIstek(BaseHTTPRequestHandler):
                     break
                 self.wfile.write(parca)
                 kalan -= len(parca)
+
+    def _statik(self, yol):
+        """static/ altındaki arayüz varlıkları. _dosya() burada uygun değil: her
+        yanıta no-store + Content-Disposition koyar. Üç savunma: yol parçası
+        denetimi (.., gizli dosya, NUL, \\), uzantı beyaz listesi, realpath kapsamı."""
+        goreli = yol[len("/static/"):]
+        parcalar = goreli.split("/")
+        if (not goreli or "\x00" in goreli or "\\" in goreli
+                or any(p == "" or p.startswith(".") for p in parcalar)):
+            return self._json(404, {"hata": "bulunamadı"})
+        ctype = STATIC_MIME.get(os.path.splitext(goreli)[1].lower())
+        if not ctype:
+            return self._json(404, {"hata": "bulunamadı"})
+        kok = os.path.realpath(STATIC_DIR)
+        gercek = os.path.realpath(os.path.join(kok, goreli))  # symlink kaçışını da yakalar
+        if not gercek.startswith(kok + os.sep) or not os.path.isfile(gercek):
+            return self._json(404, {"hata": "bulunamadı"})
+        st = os.stat(gercek)
+        gz = ctype and os.path.splitext(goreli)[1].lower() in GZIP_TURLER and st.st_size >= GZIP_ESIK and self._gzip_kabul()
+        etag = '"%x-%x%s"' % (st.st_mtime_ns, st.st_size, "-gz" if gz else "")
+        # vendor/ ve fontlar/ nadiren değişir ama dosya adı sürüm taşımaz → 1 gün;
+        # renderlar ve logo yeniden üretilebilir → her seferinde ETag ile doğrula (304).
+        cache = "public, max-age=86400" if parcalar[0] in ("vendor", "fontlar") else "no-cache"
+        ek = {"ETag": etag, "Cache-Control": cache, "X-Content-Type-Options": "nosniff", "Vary": "Accept-Encoding"}
+        if ctype == "image/svg+xml":
+            ek["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+        if self.headers.get("If-None-Match") == etag:
+            self.send_response(304)
+            for k, v in ek.items():
+                self.send_header(k, v)
+            self.end_headers()
+            return
+        if gz:
+            anahtar = (gercek, st.st_mtime_ns, st.st_size)
+            veri = _gz_statik.get(anahtar)
+            if veri is None:
+                try:
+                    with open(gercek, "rb") as f:
+                        veri = gzip.compress(f.read(), compresslevel=6)
+                except OSError:
+                    return self._json(404, {"hata": "bulunamadı"})
+                if len(_gz_statik) > 64:   # dosya değişince eski sürümler birikmesin (MemoryMax=256M)
+                    _gz_statik.clear()
+                _gz_statik[anahtar] = veri
+            ek["Content-Encoding"] = "gzip"
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(veri)))
+            for k, v in ek.items():
+                self.send_header(k, v)
+            self.end_headers()
+            if self.command != "HEAD":
+                self.wfile.write(veri)
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(st.st_size))
+        for k, v in ek.items():
+            self.send_header(k, v)
+        self.end_headers()
+        if self.command == "HEAD":
+            return
+        with open(gercek, "rb") as f:  # 64 KB parçalar: MemoryMax=256M
+            while True:
+                b = f.read(65536)
+                if not b:
+                    break
+                self.wfile.write(b)
 
     def _pdf(self, yol, indirme_adi):
         return self._dosya(yol, PDF_DIR, "application/pdf", indirme_adi)
@@ -808,6 +920,8 @@ class PanelIstek(BaseHTTPRequestHandler):
             if self.command in ("GET", "HEAD"):
                 if yol == "/":
                     return self._gonder(200, sayfa_govdesi(), "text/html; charset=utf-8")
+                if yol.startswith("/static/"):
+                    return self._statik(yol)
                 if yol == "/saglik":
                     return self._json(200, {"ok": True, "zaman": int(time.time())})
                 if yol == "/favicon.ico":
@@ -851,7 +965,7 @@ class PanelIstek(BaseHTTPRequestHandler):
                             or not ad.lower().endswith(".fbx")):
                         return self._json(400, {"hata": "geçersiz dosya adı"})
                     return self._dosya(os.path.join(FBX_DIR, ad), FBX_DIR,
-                                       "application/octet-stream", ad, inline=False)
+                                       "application/octet-stream", ad, inline=False, dogrula=True)
                 if yol.startswith("/renk/"):
                     ad = yol[len("/renk/"):]
                     if ("/" in ad or "\\" in ad or ad.startswith(".")

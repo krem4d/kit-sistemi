@@ -85,6 +85,29 @@ journalctl -u adaptx-video.service -n 20   # yalnız envanter değişince satır
 
 ---
 
+## 7) Panel arayüzü dağıtımı (`panel.html` + `static/`) — sıra önemli
+
+`panel.html` sunucu belleğinde **kendiliğinden yeniden yüklenir** (restart gerekmez) ve yalnız `/static/...` yollarına
+bağlıdır; `/static/` rotası ise yeni `panel.py`'dedir (eski sürüm 404 döner). Yalnız `panel.html`'i kopyalarsan
+arayüz bozuk açılır. Bu yüzden sıra:
+
+```bash
+# 1) arayüz varlıkları (yeni dosyalar zararsızdır: eski panel.html bunları kullanmaz)
+mkdir -p /opt/adaptx/static && cp -r static/. /opt/adaptx/static/
+rm -f '/opt/adaptx/static/parcalar/miff:-'          # eski denemeden kalma yanlış adlı dosya varsa (elle kontrol et)
+# 2) sunucu (statik rota, gzip, FBX ETag) + yeniden başlat
+install -m 644 panel.py /opt/adaptx/panel.py
+systemctl restart adaptx-panel
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/static/arayuz/panel.css   # 200 olmalı
+# 3) EN SON sayfa
+install -m 644 panel.html /opt/adaptx/panel.html
+```
+
+`static/`'te yalnız arayüz dosyaları olmalı (`arayuz/ fontlar/ marka/ parcalar/ vendor/`); `parcalar/` altında `.webp` ve
+`manifest.json` dışında dosya bırakma. `ProtectSystem=strict` altında panel `static/`'e yazmaz, yalnız okur.
+
+---
+
 ## Yol uyumu (önemli)
 
 rclone'un FBX'leri indirdiği klasör ile servisin taradığı klasör **aynı** olmalı:

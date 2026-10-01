@@ -98,6 +98,14 @@ docker compose logs -f
 | `ADAPTX_BASE` | `/data` | Konteyner içi veri kökü. **Değiştirmeyin** (mount ile eşleşir). |
 | `BLENDER_VERSION` / `BLENDER_MAJOR` | `4.2.3` / `4.2` | build-arg. Yerel Blender'ınızla eşleştirmek için değiştirip yeniden `build` alın. |
 
+## Panel (web arayüzü) bu compose'da yok
+
+`docker-compose.yml` yalnız sayım boru hattı servisini tanımlar; paneli çalıştıran bir servis yoktur (panel native çalışır,
+bkz. SERVIS.md). Bu depoda `Dockerfile` da yok, o yüzden imajın `panel.py`/`static/` içerip içermediği doğrulanmadı. Paneli
+Docker'a taşırsan `static/` klasörünü imaja ya da bir volume'a eklemek **şarttır** (`panel.html` yalnız `/static/...` yollarını
+kullanır, rota `panel.py`'dedir) ve kopyalama sırası SERVIS.md §7'deki gibidir: önce `static/`, sonra `panel.py`, en son
+`panel.html`.
+
 ## Sık işlemler
 
 ```bash

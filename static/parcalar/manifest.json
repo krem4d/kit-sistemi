@@ -1,0 +1,233 @@
+{
+  "Frenli Menteşe": {
+    "slug": "frenli-mentese",
+    "gorsel": "parcalar/frenli-mentese.webp",
+    "tur": "parcalar/frenli-mentese-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 100,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/frenli-mentese-tur-512.webp",
+    "kucuk": "parcalar/frenli-mentese-192.webp"
+  },
+  "Frensiz Menteşe": {
+    "slug": "frensiz-mentese",
+    "gorsel": "parcalar/frensiz-mentese.webp",
+    "tur": "parcalar/frensiz-mentese-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 95,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/frensiz-mentese-tur-512.webp",
+    "kucuk": "parcalar/frensiz-mentese-192.webp"
+  },
+  "Menteşe Tabanı": {
+    "slug": "mentese-tabani",
+    "gorsel": "parcalar/mentese-tabani.webp",
+    "tur": "parcalar/mentese-tabani-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 46,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/mentese-tabani-tur-512.webp",
+    "kucuk": "parcalar/mentese-tabani-192.webp"
+  },
+  "Modülleri Birbirine Bağlama": {
+    "slug": "modul-baglama",
+    "gorsel": "parcalar/modul-baglama.webp",
+    "tur": "parcalar/modul-baglama-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 42,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/modul-baglama-tur-512.webp",
+    "kucuk": "parcalar/modul-baglama-192.webp"
+  },
+  "Raf Pimi": {
+    "slug": "raf-pimi",
+    "gorsel": "parcalar/raf-pimi.webp",
+    "tur": "parcalar/raf-pimi-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 20,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/raf-pimi-tur-512.webp",
+    "kucuk": "parcalar/raf-pimi-192.webp"
+  },
+  "Linco Gövde": {
+    "slug": "linco-govde",
+    "gorsel": "parcalar/linco-govde.webp",
+    "tur": "parcalar/linco-govde-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 53,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/linco-govde-tur-512.webp",
+    "kucuk": "parcalar/linco-govde-192.webp"
+  },
+  "Linco Kapak": {
+    "slug": "linco-kapak",
+    "gorsel": "parcalar/linco-kapak.webp",
+    "tur": "parcalar/linco-kapak-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 18,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/linco-kapak-tur-512.webp",
+    "kucuk": "parcalar/linco-kapak-192.webp"
+  },
+  "Linco Dübel": {
+    "slug": "linco-dubel",
+    "gorsel": "parcalar/linco-dubel.webp",
+    "tur": "parcalar/linco-dubel-tur.webp",
+    "kare": 24,
+    "prosedurel": true,
+    "boy_mm": 15,
+    "boy_tahmin": false,
+    "tur_512": "parcalar/linco-dubel-tur-512.webp",
+    "kucuk": "parcalar/linco-dubel-192.webp"
+  },
+  "Minifix": {
+    "slug": "minifix",
+    "gorsel": "parcalar/minifix.webp",
+    "tur": "parcalar/minifix-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 17,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/minifix-tur-512.webp",
+    "kucuk": "parcalar/minifix-192.webp"
+  },
+  "Uzun Linco Pimi": {
+    "slug": "uzun-linco-pimi",
+    "gorsel": "parcalar/uzun-linco-pimi.webp",
+    "tur": "parcalar/uzun-linco-pimi-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 60,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/uzun-linco-pimi-tur-512.webp",
+    "kucuk": "parcalar/uzun-linco-pimi-192.webp"
+  },
+  "Ayarlı Ayak": {
+    "slug": "ayarli-ayak",
+    "gorsel": "parcalar/ayarli-ayak.webp",
+    "tur": "parcalar/ayarli-ayak-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 50,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/ayarli-ayak-tur-512.webp",
+    "kucuk": "parcalar/ayarli-ayak-192.webp"
+  },
+  "Allen": {
+    "slug": "allen",
+    "gorsel": "parcalar/allen.webp",
+    "tur": "parcalar/allen-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 80,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/allen-tur-512.webp",
+    "kucuk": "parcalar/allen-192.webp"
+  },
+  "Tıpa": {
+    "slug": "tipa",
+    "gorsel": "parcalar/tipa.webp",
+    "tur": "parcalar/tipa-tur.webp",
+    "kare": 24,
+    "prosedurel": true,
+    "boy_mm": 22,
+    "boy_tahmin": false,
+    "tur_512": "parcalar/tipa-tur-512.webp",
+    "kucuk": "parcalar/tipa-192.webp"
+  },
+  "Kulp": {
+    "slug": "kulp",
+    "gorsel": "parcalar/kulp.webp",
+    "tur": "parcalar/kulp-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 210,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/kulp-tur-512.webp",
+    "kucuk": "parcalar/kulp-192.webp"
+  },
+  "Kulp Vidası": {
+    "slug": "kulp-vidasi",
+    "gorsel": "parcalar/kulp-vidasi.webp",
+    "tur": "parcalar/kulp-vidasi-tur.webp",
+    "kare": 24,
+    "prosedurel": true,
+    "boy_mm": 31,
+    "boy_tahmin": false,
+    "tur_512": "parcalar/kulp-vidasi-tur-512.webp",
+    "kucuk": "parcalar/kulp-vidasi-192.webp"
+  },
+  "L Bağlantı Seti": {
+    "slug": "l-baglanti-seti",
+    "gorsel": "parcalar/l-baglanti-seti.webp",
+    "tur": "parcalar/l-baglanti-seti-tur.webp",
+    "kare": 24,
+    "prosedurel": true,
+    "boy_mm": 47,
+    "boy_tahmin": false,
+    "tur_512": "parcalar/l-baglanti-seti-tur-512.webp",
+    "kucuk": "parcalar/l-baglanti-seti-192.webp"
+  },
+  "Askılık Flanşı": {
+    "slug": "askilik-flansi",
+    "gorsel": "parcalar/askilik-flansi.webp",
+    "tur": "parcalar/askilik-flansi-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": 50,
+    "boy_tahmin": true,
+    "tur_512": "parcalar/askilik-flansi-tur-512.webp",
+    "kucuk": "parcalar/askilik-flansi-192.webp"
+  },
+  "Askılık Borusu": {
+    "slug": "askilik-borusu",
+    "gorsel": "parcalar/askilik-borusu.webp",
+    "tur": "parcalar/askilik-borusu-tur.webp",
+    "kare": 24,
+    "prosedurel": false,
+    "boy_mm": null,
+    "boy_tahmin": false,
+    "tur_512": "parcalar/askilik-borusu-tur-512.webp",
+    "kucuk": "parcalar/askilik-borusu-192.webp"
+  },
+  "Ağaç Vidası": {
+    "slug": "agac-vidasi",
+    "gorsel": "parcalar/agac-vidasi.webp",
+    "tur": "parcalar/agac-vidasi-tur.webp",
+    "kare": 24,
+    "prosedurel": true,
+    "boy_mm": 29,
+    "boy_tahmin": false,
+    "tur_512": "parcalar/agac-vidasi-tur-512.webp",
+    "kucuk": "parcalar/agac-vidasi-192.webp"
+  },
+  "Arkalık Çivisi": {
+    "slug": "arkalik-civisi",
+    "gorsel": "parcalar/arkalik-civisi.webp",
+    "tur": "parcalar/arkalik-civisi-tur.webp",
+    "kare": 24,
+    "prosedurel": true,
+    "boy_mm": 23,
+    "boy_tahmin": false,
+    "tur_512": "parcalar/arkalik-civisi-tur-512.webp",
+    "kucuk": "parcalar/arkalik-civisi-192.webp"
+  },
+  "Ray Seti": {
+    "slug": "ray-seti",
+    "gorsel": "parcalar/ray-seti.webp",
+    "tur": "parcalar/ray-seti-tur.webp",
+    "kare": 24,
+    "prosedurel": true,
+    "boy_mm": 386,
+    "boy_tahmin": false,
+    "tur_512": "parcalar/ray-seti-tur-512.webp",
+    "kucuk": "parcalar/ray-seti-192.webp"
+  }
+}
