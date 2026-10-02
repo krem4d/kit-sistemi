@@ -237,6 +237,20 @@
   <p class="buyuk-alt" id="buyukAlt"></p>
 </dialog>
 
+<button class="admin-kose" id="adminBtn" data-act="admin-ac" aria-haspopup="dialog" aria-label="Ağırlık ayarları (yönetici)" title="Ağırlık ayarları"><svg class="i" aria-hidden="true"><use href="#i-tarti"/></svg></button>
+<dialog class="admin-dlg" id="adminDlg" aria-labelledby="adminBaslik">
+  <div class="video-ust"><h2 id="adminBaslik">Birim ağırlıklar</h2><button class="ikon-btn" data-act="admin-kapat" aria-label="Kapat"><svg class="i"><use href="#i-kapat"/></svg></button></div>
+  <form class="admin-govde" id="adminForm" autocomplete="off">
+    <p class="admin-not">Tartı hedefleri adet × buradaki birim ağırlıkla hesaplanır (gram). Kayıttan sonra panelde hemen güncellenir; PDF'ler siparişler yeniden işlenince değişir.</p>
+    <div class="admin-tablo" id="adminTablo"></div>
+    <div class="admin-alt">
+      <span class="admin-durum" id="adminDurum" role="status" aria-live="polite"></span>
+      <button type="button" class="btn-ikinci-kucuk" data-act="admin-varsayilan"><svg class="i" aria-hidden="true"><use href="#i-sifirla"/></svg><span>Varsayılanlar</span></button>
+      <button type="submit" class="btn-ana btn-orta"><span class="btn-dolgu"></span>Kaydet</button>
+    </div>
+  </form>
+</dialog>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script type="module" src="/static/arayuz/panel.js"></script>
 </body>

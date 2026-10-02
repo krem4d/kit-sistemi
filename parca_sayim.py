@@ -325,6 +325,21 @@ WEIGHTS = {
     "civi": 0.335,
 }
 
+# Panelin admin ekranından (data/agirliklar.json) değiştirilen birim ağırlıklar yukarıdaki
+# varsayılanların üstüne yazılır. Anahtarlar panel.py AGIRLIK_VARSAYILAN adlarıdır.
+_AGIRLIK_ESLEME = {
+    "Raf Pimi": "rafpimi", "Ağaç Vidası": "agacvidasi", "Minifix": "minifix",
+    "Linco Dübel": "lincodubel", "Linco Gövde": "linco", "Linco Kapak": "lincokapak",
+    "Arkalık Çivisi": "civi",
+}
+try:
+    with open(os.path.join(_base_dir(), "data", "agirliklar.json"), encoding="utf-8") as _f:
+        for _ad, _g in json.load(_f).items():
+            if _ad in _AGIRLIK_ESLEME and isinstance(_g, (int, float)) and 0 < _g < 1000:
+                WEIGHTS[_AGIRLIK_ESLEME[_ad]] = float(_g)
+except (OSError, ValueError, AttributeError):
+    pass   # dosya yok/bozuk → varsayılan ağırlıklar
+
 
 # ── delikbulma.py'den kopyalanan yardımcılar ─────────────────────────────────
 def get_perfect_local_bounds(obj):

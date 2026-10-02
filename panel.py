@@ -59,6 +59,7 @@ MANIFEST = os.path.join(BASE, "islem_gecmisi.json")
 DATA_DIR = os.path.join(BASE, "data")
 CHECKLIST_DOSYA = os.path.join(DATA_DIR, "panel_checklist.json")
 NOTLAR_DOSYA = os.path.join(DATA_DIR, "panel_notlar.json")
+AGIRLIK_DOSYA = os.path.join(DATA_DIR, "agirliklar.json")
 SAYFA_DOSYA = os.path.join(BASE, "panel.html")
 STATIC_DIR = os.path.join(BASE, "static")  # arayüz varlıkları: parça renderları, logo, fontlar, three.js
 # Beyaz liste: bilinmeyen uzantı 404. mimetypes'a güvenilmez (.js bazı sistemlerde
@@ -546,6 +547,79 @@ def sistem_durumu():
         return veri
 
 
+# ------------------------------------------------------- BİRİM AĞIRLIKLAR ---
+# Tartılarak sayılan parçaların birim ağırlıkları (g). Varsayılanlar Ağırlıklar.md ile aynı;
+# admin ekranında değiştirilenler data/agirliklar.json'a yazılır (yalnız varsayılandan
+# ayrılanlar değil, tüm tablo). parca_sayim.py aynı dosyayı okur (yeni işlenen siparişler);
+# mevcut JSON'lardaki "gram" ise burada adet × birim ağırlıkla yeniden hesaplanır, böylece
+# değişiklik sipariş yeniden işlenmeden panelde görünür.
+AGIRLIK_VARSAYILAN = {
+    "Raf Pimi": 2.7, "Ağaç Vidası": 1.108, "Minifix": 3.401, "Linco Dübel": 4.4,
+    "Linco Gövde": 4.631, "Linco Kapak": 0.216, "Arkalık Çivisi": 0.335,
+}
+# adet anahtarı -> JSON "gram" anahtarı (pdf_uret.GRAM_KEY ile aynı)
+AGIRLIK_GRAM_ANAHTARI = {
+    "Raf Pimi": "Raf Pimi", "Ağaç Vidası": "Ağaç Vidası", "Minifix": "Minifix",
+    "Linco Dübel": "Linco Dübel", "Linco Gövde": "Linco", "Linco Kapak": "Linco Kapak",
+    "Arkalık Çivisi": "Çivi",
+}
+_agirlik_kilit = threading.Lock()
+
+
+def agirliklar_oku():
+    """Geçerli ağırlıklar: varsayılan + dosyadaki geçerli değerler."""
+    sonuc = dict(AGIRLIK_VARSAYILAN)
+    try:
+        with open(AGIRLIK_DOSYA, encoding="utf-8") as f:
+            ham = json.load(f)
+        for ad, g in (ham.items() if isinstance(ham, dict) else ()):
+            if ad in sonuc and isinstance(g, (int, float)) and not isinstance(g, bool) and 0 < g < 1000:
+                sonuc[ad] = float(g)
+    except (OSError, ValueError):
+        pass
+    return sonuc
+
+
+def agirliklar_yaz(yeni):
+    """yeni: {ad: gram}. Doğrulanmış tüm tabloyu atomik yazar; geçerli tabloyu döndürür."""
+    with _agirlik_kilit:
+        mevcut = agirliklar_oku()
+        for ad, g in yeni.items():
+            if ad not in AGIRLIK_VARSAYILAN:
+                raise ValueError(f"bilinmeyen parça: {ad}")
+            if isinstance(g, bool) or not isinstance(g, (int, float)) or not 0 < g < 1000:
+                raise ValueError(f"{ad}: ağırlık 0 ile 1000 g arasında bir sayı olmalı")
+            mevcut[ad] = round(float(g), 3)
+        f = tempfile.NamedTemporaryFile("w", dir=DATA_DIR, delete=False,
+                                        prefix=".agirliklar.tmp", encoding="utf-8")
+        try:
+            json.dump(mevcut, f, ensure_ascii=False, indent=1)
+            f.flush()
+            os.fsync(f.fileno())
+            f.close()
+            os.replace(f.name, AGIRLIK_DOSYA)
+        except BaseException:
+            f.close()
+            try:
+                os.unlink(f.name)
+            except OSError:
+                pass
+            raise
+        return mevcut
+
+
+def gram_hesapla(veri):
+    """Siparişin gram sözlüğü: dosyadaki gram anahtarları korunur, değerler adet × güncel ağırlık."""
+    gram = dict(veri.get("gram") or {})
+    adet = veri.get("adet") or {}
+    w = agirliklar_oku()
+    for ad, gk in AGIRLIK_GRAM_ANAHTARI.items():
+        n = adet.get(ad)
+        if gk in gram and isinstance(n, (int, float)):
+            gram[gk] = round(n * w[ad], 1)
+    return gram
+
+
 # ------------------------------------------------------------ API GÖVDESİ ---
 def durum_yaniti():
     """GET /api/durum gövdesi: sistem + sayaçlar + tüm siparişlerin TAM detayı (kart
@@ -568,7 +642,7 @@ def durum_yaniti():
             satirlar.append({
                 "no": no, "durum": k["durum"], "parca": k["parca"],
                 "pdf": k["pdf"], "ozet_no": k["ozet_no"], "zaman": k["zaman"],
-                "adet": veri.get("adet") or {}, "gram": veri.get("gram") or {},
+                "adet": veri.get("adet") or {}, "gram": gram_hesapla(veri),
                 "ray_setleri": veri.get("ray_setleri") or {},
                 "askilik_boylari": askilik_boylari(veri),
                 "checklist": checklist, "tamam": tamam, "toplam": toplam,
@@ -600,7 +674,7 @@ def siparis_yaniti(no, ham_goster=False):
         checklist, tamam, toplam = checklist_ozeti(no, veri)
     yanit = {
         "no": no, "durum": k["durum"], "parca_sayisi": veri.get("parca_sayisi"),
-        "adet": veri.get("adet") or {}, "gram": veri.get("gram") or {},
+        "adet": veri.get("adet") or {}, "gram": gram_hesapla(veri),
         "ray_setleri": veri.get("ray_setleri") or {},
         "askilik_boylari": askilik_boylari(veri),
         "fbx": k["fbx"], "video": k["video"], "pdf": k["pdf"], "ozet_no": k["ozet_no"],
@@ -928,6 +1002,9 @@ class PanelIstek(BaseHTTPRequestHandler):
                     return self._gonder(204, b"", "image/x-icon")
                 if yol == "/api/durum":
                     return self._json(200, durum_yaniti())
+                if yol == "/api/agirliklar":
+                    return self._json(200, {"agirliklar": agirliklar_oku(),
+                                            "varsayilan": AGIRLIK_VARSAYILAN})
                 if yol.startswith("/api/siparis/"):
                     no = yol[len("/api/siparis/"):]
                     if not ORDER_RX.fullmatch(no):
@@ -976,7 +1053,7 @@ class PanelIstek(BaseHTTPRequestHandler):
                 return self._json(404, {"hata": "bulunamadı"})
 
             if self.command == "POST":
-                if yol not in ("/api/checklist", "/api/not"):
+                if yol not in ("/api/checklist", "/api/not", "/api/agirliklar"):
                     return self._json(404, {"hata": "bulunamadı"})
                 try:
                     uzunluk = int(self.headers.get("Content-Length") or 0)
@@ -988,6 +1065,16 @@ class PanelIstek(BaseHTTPRequestHandler):
                     govde = json.loads(self.rfile.read(uzunluk))
                 except Exception:
                     return self._json(400, {"hata": "JSON çözümlenemedi"})
+                if yol == "/api/agirliklar":
+                    yeni = govde.get("agirliklar") if isinstance(govde, dict) else None
+                    if not isinstance(yeni, dict) or not yeni:
+                        return self._json(400, {"hata": "agirliklar sözlüğü gerekli"})
+                    try:
+                        tablo = agirliklar_yaz(yeni)
+                    except ValueError as e:
+                        return self._json(400, {"hata": str(e)})
+                    return self._json(200, {"ok": True, "agirliklar": tablo,
+                                            "varsayilan": AGIRLIK_VARSAYILAN})
                 no = str(govde.get("siparis") or "")
                 if not ORDER_RX.fullmatch(no):
                     return self._json(400, {"hata": "geçersiz sipariş no"})

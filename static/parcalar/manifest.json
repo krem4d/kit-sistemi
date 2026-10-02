@@ -81,8 +81,8 @@
     "gorsel": "parcalar/linco-dubel.webp",
     "tur": "parcalar/linco-dubel-tur.webp",
     "kare": 24,
-    "prosedurel": true,
-    "boy_mm": 15,
+    "prosedurel": false,
+    "boy_mm": 21,
     "boy_tahmin": false,
     "tur_512": "parcalar/linco-dubel-tur-512.webp",
     "kucuk": "parcalar/linco-dubel-192.webp"

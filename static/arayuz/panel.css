@@ -1145,3 +1145,22 @@ svg.tamam-ikon { width: 16px; height: 16px; color: var(--tamam); }
   .n-nabiz::after { display: none; }
 }
 @media print { .ust, .ray, .goz-sirasi { display: none; } }
+
+/* ---------- Admin: birim ağırlıklar (köşede silik düğme + modal) ---------- */
+.admin-kose { position: fixed; right: 6px; bottom: 6px; z-index: 5; width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--kalem-3); opacity: .28; cursor: pointer; transition: opacity var(--t-giris) var(--ease); }
+.admin-kose:hover, .admin-kose:focus-visible { opacity: .9; }
+.admin-kose .i { width: 15px; height: 15px; }
+.admin-dlg { border: 0; padding: 0; border-radius: var(--r4); background: var(--kagit); color: var(--kalem); width: min(440px, 94vw); box-shadow: var(--golge); overflow: hidden; }
+.admin-dlg::backdrop { background: var(--perde); }
+.admin-dlg[open] { animation: dlg-gir var(--t-giris) var(--ease); }
+.admin-govde { padding: 0 var(--s5) var(--s5); display: grid; gap: var(--s3); }
+.admin-not { font-size: var(--f-s); color: var(--kalem-3); line-height: 1.45; }
+.admin-tablo { display: grid; grid-template-columns: 1fr auto; gap: var(--s2) var(--s3); align-items: center; }
+.admin-tablo label { font-size: var(--f-m, 1rem); }
+.admin-tablo .adm-gir { display: flex; align-items: center; gap: 6px; }
+.admin-tablo input { width: 96px; padding: 7px 9px; border: 1px solid var(--kalem-3); border-radius: 8px; background: transparent; color: inherit; font: inherit; text-align: right; font-variant-numeric: tabular-nums; }
+.admin-tablo input:focus-visible { outline: 2px solid var(--kalem); outline-offset: 1px; }
+.admin-tablo input[aria-invalid="true"] { border-color: #c0392b; }
+.admin-tablo small { color: var(--kalem-3); }
+.admin-alt { display: flex; align-items: center; gap: var(--s3); justify-content: flex-end; margin-top: var(--s2); }
+.admin-durum { margin-right: auto; font-size: var(--f-s); color: var(--kalem-3); }

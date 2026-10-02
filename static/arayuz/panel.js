@@ -1457,6 +1457,48 @@ function ucKapat() {
 }
 
 /* ====================================================================== 10. Olaylar */
+/* ====================================================================== Admin: birim ağırlıklar */
+/* Ağırlık tablosu sunucudadır (data/agirliklar.json). Açılışta okunur ve parcalar.js'deki
+   BIRIM_GRAM'in üstüne yazılır; "Birim X g" etiketi ve (sunucuda hesaplanan) tartı hedefi böylece tutarlı kalır. */
+const ADMIN_PARCALAR = ['Raf Pimi', 'Ağaç Vidası', 'Minifix', 'Linco Dübel', 'Linco Gövde', 'Linco Kapak', 'Arkalık Çivisi'];
+let adminVars = {};
+async function agirlikYukle() {
+  try {
+    const r = await veriCek('/api/agirliklar', { cache: 'no-store', zamanAsimi: POLL_ZAMAN_ASIMI });
+    adminVars = r.varsayilan || {};
+    Object.assign(BIRIM_GRAM, r.agirliklar || {});
+  } catch (e) { /* eski sunucu: panel parcalar.js'deki sabitlerle çalışır */ }
+}
+function adminDoldur(deg) {
+  $('#adminTablo').innerHTML = ADMIN_PARCALAR.map((ad, i) => `<label for="adm${i}">${esc(ad)}</label><span class="adm-gir"><input id="adm${i}" data-ad="${esc(ad)}" inputmode="decimal" value="${esc(String(deg[ad] ?? ''))}"><small>g</small></span>`).join('');
+}
+const adminSayi = (v) => Number(String(v).trim().replace(',', '.'));
+async function adminAc() {
+  const dlg = $('#adminDlg'); if (dlg.open) return;
+  $('#adminDurum').textContent = '';
+  adminDoldur(BIRIM_GRAM);
+  dlg.showModal();
+}
+function adminKapat() { const d = $('#adminDlg'); if (d.open) d.close(); }
+async function adminKaydet(e) {
+  e.preventDefault();
+  const yeni = {}; let hata = false;
+  $$('#adminTablo input').forEach((inp) => {
+    const g = adminSayi(inp.value), ok = Number.isFinite(g) && g > 0 && g < 1000;
+    inp.setAttribute('aria-invalid', String(!ok)); if (!ok) hata = true; else yeni[inp.dataset.ad] = g;
+  });
+  const du = $('#adminDurum');
+  if (hata) { du.textContent = 'Ağırlıklar 0 ile 1000 g arasında sayı olmalı.'; return; }
+  du.textContent = 'Kaydediliyor…';
+  try {
+    const r = await postJson('/api/agirliklar', { agirliklar: yeni });
+    Object.assign(BIRIM_GRAM, r.agirliklar);
+    du.textContent = 'Kaydedildi.';
+    toast('Ağırlıklar kaydedildi');
+    yenile();
+  } catch (err) { du.textContent = `Kaydedilemedi: ${err.message}`; }
+}
+
 function aksiyon(act, t) {
   switch (act) {
     case 'yenile': { const s = $('#yenileBtn svg'); if (s && !azHareket()) s.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(360deg)' }], { duration: 600, easing: EASE }); yenile(); break; }
@@ -1496,6 +1538,9 @@ function aksiyon(act, t) {
     case 'video-kapat': videoKapat(); break;
     case 'buyut': buyukAc(); break;
     case 'buyuk-kapat': buyukKapat(); break;
+    case 'admin-ac': adminAc(); break;
+    case 'admin-kapat': adminKapat(); break;
+    case 'admin-varsayilan': adminDoldur(adminVars); break;
     case 'uc': ucAc(); break;
     case 'uc-kapat': ucKapat(); break;
     case 'uc-kenar': UC.kenar = !UC.kenar; if (UC.k) UC.k.kenar(UC.kenar); t.setAttribute('aria-pressed', String(UC.kenar)); break;
@@ -1591,6 +1636,8 @@ $('#videoDlg').addEventListener('click', (e) => { if (e.target === e.currentTarg
 $('#videoEl').addEventListener('error', () => { clearTimeout(videoZ); videoHata(); });
 $('#videoEl').addEventListener('loadedmetadata', () => { clearTimeout(videoZ); videoDurum(''); const du = $('#videoDuyuru'); if (du) du.textContent = ''; });
 $('#buyukDlg').addEventListener('close', buyukTemizle);
+$('#adminDlg').addEventListener('click', (e) => { if (e.target === e.currentTarget) adminKapat(); });
+$('#adminForm').addEventListener('submit', adminKaydet);
 $('#buyukDlg').addEventListener('click', (e) => { if (e.target === e.currentTarget) buyukKapat(); });
 new ResizeObserver(() => belgelerSigdir()).observe($('.sb-alt'));
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(belgelerSigdir); // yazı tipi gelince genişlikler değişir
@@ -1604,7 +1651,7 @@ window.addEventListener('beforeunload', (e) => {
 document.addEventListener('keydown', (e) => {
   const t = e.target;
   const yaziyor = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
-  if ($('#videoDlg').open || $('#buyukDlg').open) return; // modal kendi Esc/odak yönetimini yapar
+  if ($('#videoDlg').open || $('#buyukDlg').open || $('#adminDlg').open) return; // modal kendi Esc/odak yönetimini yapar
   if (e.key === 'Escape') {
     if (S.pop) { popKapat(); return; }
     if (S.ucAcik) { if (!document.fullscreenElement) ucKapat(); return; }
@@ -1679,6 +1726,7 @@ function baslat() {
   const q = P.get('ara'); if (q) { arama.value = q; S.q = q; }
   // manifest ve /api/durum paralel (zincir kısalır); ilk çizim manifest gelince yapılır
   S.manifestSoz = fetch('/static/parcalar/manifest.json').then((r) => (r.ok ? r.json() : {})).catch(() => ({})).then((m) => { S.manifest = m || {}; });
+  agirlikYukle();
   yenile();
   { const sr = $('#gozSirasi'); sr.addEventListener('scroll', seritMaske, { passive: true }); new ResizeObserver(seritMaske).observe(sr); }
   new ResizeObserver(bantOlc).observe($('#uyariKutu')); // bant açılıp kapanınca / satır sayısı değişince

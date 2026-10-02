@@ -62,6 +62,8 @@ MODULBAG = BELGELER + "/adaptx-2/modulbag/"
 #                 deger = golge uzunluguna uygulanan carpan (1.0 = tam). Golge kare disina tasmasin diye
 #   tur_doluluk : (istege bagli) tur karelerinde nesnenin kareyi doldurma orani (varsayilan DOLULUK)
 #   rim         : (istege bagli) kenar isigi carpani
+#   slot_tut    : (istege bagli) {nesne_adi: [slot indeksleri]} yalniz bu malzeme slotlarinin
+#                 poligonlari kalir (birlesik nesneden tek parca ayirmak icin)
 # --------------------------------------------------------------------------
 PARCALAR = {
     "Frenli Menteşe": dict(slug="frenli-mentese", prosedurel=False, boy_mm=100, boy_tahmin=True,
@@ -81,7 +83,11 @@ PARCALAR = {
         tur_poz=(155, 0, 0), tur_el=50,
         boy_mm=18, boy_tahmin=True,
         kaynak=[(KULLANILAN + "mesan linco optimized.fbx", {"Minifix_Kapak": "beyaz_plastik"})]),
-    "Linco Dübel": dict(slug="linco-dubel", prosedurel=True, tur_poz=(70, 0, 0), tur_el=30),
+    # Gercek model: "Dübelli_Pim.001"in slot 0'i (ribali ahsap govde); slot 1 metal pim atilir.
+    # Model ekseni X; poz ile dik durur. Olcu modelden: O10.5 x 20.7 mm.
+    "Linco Dübel": dict(slug="linco-dubel", prosedurel=False, boy_mm=21, boy_tahmin=False,
+        poz=(0, -90, 0), tur_poz=(0, -70, 0), tur_el=30, slot_tut={"Dübelli_Pim.001": [0]},
+        kaynak=[(KULLANILAN + "mesan linco optimized.fbx", {"Dübelli_Pim.001": ["ahsap"]})]),
     "Minifix": dict(slug="minifix", prosedurel=False, boy_mm=17, boy_tahmin=True,
         kaynak=[(KULLANILAN + "mesan linco optimized.fbx", {"Minifix.001": "zamak"})]),
     "Uzun Linco Pimi": dict(slug="uzun-linco-pimi", prosedurel=False, el=30, yaw=-55, boy_mm=60, boy_tahmin=True,
@@ -595,6 +601,17 @@ if BLENDER_ICINDE:
         nesneler = []
         for o, malz in tutulan:
             slotlar = malz if isinstance(malz, list) else [malz]
+            tut = {unicodedata.normalize("NFC", k): v for k, v in tanim.get("slot_tut", {}).items()}
+            tut = tut.get(unicodedata.normalize("NFC", o.name))
+            if tut is not None:
+                import bmesh
+                bm = bmesh.new()
+                bm.from_mesh(o.data)
+                bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.material_index not in tut], context="FACES")
+                for f in bm.faces:
+                    f.material_index = 0
+                bm.to_mesh(o.data)
+                bm.free()
             o.data.materials.clear()
             for s in slotlar:
                 o.data.materials.append(malzeme_yap(s))
