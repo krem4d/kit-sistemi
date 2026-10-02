@@ -355,6 +355,8 @@ svg.i.ok-yukari { transform: rotate(-90deg); } svg.i.ok-asagi { transform: rotat
 .yon svg.i { width: 14px; height: 14px; transition: transform var(--t-durum) var(--ease); }
 .yon svg.yon-asagi { transform: rotate(90deg); } .yon svg.yon-yukari { transform: rotate(-90deg); }
 .liste { scroll-padding: 8px; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 calc(-1 * var(--s2)); padding: 2px var(--s2) 4px; overscroll-behavior: contain; } /* üst/alt pay: seçili satırın halkası kırpılmasın */
+.satir-sar { position: relative; flex: none; display: grid; }
+.satir-sar .satir { padding-right: 48px; } /* FBX'siz satırda da aynı pay: sayı ve animasyon kutusu tek sütunda hizalı */
 .satir {
   position: relative; flex: none; display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: var(--s3);
   min-height: 48px; padding: 6px 12px 10px; border-radius: var(--r2); text-align: left;
@@ -364,7 +366,22 @@ svg.i.ok-yukari { transform: rotate(-90deg); } svg.i.ok-asagi { transform: rotat
 .satir[aria-current="true"] { background: var(--levha); box-shadow: 0 0 0 1px var(--cizgi-2); }
 .satir[aria-current="true"]::before { inset: 10px auto 10px 0; width: 4px; border-radius: 0 3px 3px 0; opacity: 1; background: var(--kalem); } /* seçili sipariş: zemin farkı 1.1:1 idi (WCAG 1.4.11); yalnız renkle değil çubukla da belli */
 .s-no { font-size: var(--f-m); font-weight: 600; letter-spacing: -.005em; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 6px; }
-.s-say { font: 500 var(--f-xs) var(--ui); color: var(--kalem-3); font-variant-numeric: tabular-nums; }
+.s-say { font: 500 var(--f-xs) var(--ui); color: var(--kalem-3); font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 8px; }
+/* Animasyon kutusu: Drive'da <no>.mp4 var mı. Yalnız renk değil, title ve ayrıntı panelindeki metin de söyler. */
+.s-anim { width: 8px; height: 8px; border-radius: 2px; flex: none; background: var(--kritik); box-shadow: 0 0 0 2px var(--kritik-soft); transition: background var(--t-durum) var(--ease), box-shadow var(--t-durum) var(--ease); }
+.s-anim[data-var="1"] { background: var(--tamam); box-shadow: 0 0 0 2px var(--tamam-soft); }
+.s-oran { min-width: 5ch; text-align: right; }
+.s-fbx {
+  position: absolute; top: 50%; right: 6px; width: 34px; height: 34px; margin-top: -19px; display: grid; place-items: center;
+  border-radius: var(--r1); color: var(--kalem-3); z-index: 1;
+  transition: color var(--t-durum) var(--ease), background var(--t-durum) var(--ease), transform var(--t-basma) var(--ease);
+}
+.s-fbx svg.i { width: 17px; height: 17px; transition: transform var(--t-durum) var(--ease); }
+.s-fbx:hover { color: var(--kalem); background: var(--oyuk); }
+.s-fbx:hover svg.i { transform: translateY(1px); }
+.s-fbx:active { transform: scale(.92); }
+.s-fbx:focus-visible { outline: 2px solid var(--kalem); outline-offset: -2px; }
+.s-fbx-say { position: absolute; right: 3px; bottom: 2px; font: 600 9px/1 var(--ui); color: var(--kalem-2); }
 .s-bar { grid-column: 1 / -1; height: 3px; border-radius: 999px; background: var(--cizgi); position: relative; overflow: hidden; margin-top: 6px; }
 .s-bar::after { content: ""; position: absolute; inset: 0; background: var(--kalem-3); transform: scaleX(var(--p, 0)); transform-origin: left; transition: transform var(--t-giris) var(--ease); }
 .satir[data-tam="1"] .s-bar::after { background: var(--tamam); }
@@ -1101,6 +1118,7 @@ svg.tamam-ikon { width: 16px; height: 16px; color: var(--tamam); }
   .nokta { forced-color-adjust: none; border: 1px solid CanvasText; }
   .satir[aria-current="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
   .satir[aria-current="true"]::before { forced-color-adjust: none; background: Highlight; }
+  .s-anim { forced-color-adjust: none; border: 1px solid CanvasText; }
   .cip[aria-pressed="true"], .seg button[aria-pressed="true"], .btn-ikinci-kucuk[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: -2px; font-weight: 700; }
   .seg-pil { box-shadow: none; border: 2px solid Highlight; }
   .ilerleme i, .s-bar, .ust-cizgi, .disk-bar { border: 1px solid CanvasText; }

@@ -199,10 +199,16 @@ eklerken `STATIC_MIME`'a dokunmak gerekmez.
   üzerindedir. "Bitenleri gizle" (varsayılan açık) yalnız "Tümü" filtresinde ve yalnız animasyonu olan + tüm
   parçaları işaretli siparişleri gizler; sonuç: arama "Tümü"de bitmiş siparişi bulamaz (boş durum iletisi bunu söyler,
   "Tamamlanan"da bulunur).
+- **Liste satırı:** no, sayı (`t/n`) ve solunda 8 px animasyon kutusu (yeşil = Drive'da `<no>.mp4` var, kırmızı =
+  yok; metin yok, `title`'da yazar — Kerem'in isteği, 2026-10-02). Sağda FBX indirme: tek FBX'te `<a download>`,
+  birden çoğunda sayı rozetli düğme hepsini 400 ms arayla indirir (`fbxHepsiniIndir`). İndirme `.satir` düğmesinin
+  kardeşidir (`.satir-sar` sarmalayıcı; `<button>` içinde `<a>` geçersiz), `tabindex=-1` (liste tek Tab durağı;
+  klavyeyle FBX ayrıntıdaki belge satırından). Liste imzası video ve FBX adlarını içerir: yeni video gelince satır yenilenir.
 - **Sahne başlığı:** ‹ sipariş no › (`k`/`j`), parça/kalem sayısı, durum rozeti, Toplama ↔ Genel bakış, 3B model;
   belgeler tek satırda sessiz bağlantılar (PDF, Özet N, FBX [çoklu numaralı, `download`], Renk · <renk>,
   Animasyon + indir; sığmayanlar ⋯ menüsüne gider), Not, kalem sayısı kadar segmentli ilerleme.
-  "Animasyon yok" nötr metindir (kırmızı değil); kırmızı yalnız gerçek hata içindir.
+  "Animasyon yok" nötr metindir (kırmızı değil); kırmızı yalnız gerçek hata içindir — tek istisna listedeki
+  animasyon kutusu (Kerem açıkça kırmızı/yeşil istedi).
 - **Toplama görünümü:** bir kalem sahnesi — tepsi içinde parça görseli (fare üstünde/sürükleyince 24 kare döner,
   ⤢ ile 768 px büyük görünüm), ad, tek cümle açıklama, "Kalem i / n · tartarak/adetle sayılır", dev adet, tartılıyorsa
   **Tartı hedefi** plakası (gram), "Birim 3,401 g · Boy ≈ 17 mm", **Toplandı** (mürekkep dolgu; işaretlenince yeşil)

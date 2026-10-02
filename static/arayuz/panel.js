@@ -312,7 +312,7 @@ function renderRay() {
   if (lb.textContent !== pb.metin) lb.textContent = pb.metin;
   lb.classList.toggle('vurgu', pb.vurgu);
   renderRayOzet();
-  const imza = l.map((o) => { const [t, n] = ilerleme(o); return `${o.no}:${o.durum}:${t}/${n}:${kayitsizKalemler(o.no).length}${o.no === S.sel ? '*' : ''}`; }).join(',');
+  const imza = l.map((o) => { const [t, n] = ilerleme(o); return `${o.no}:${o.durum}:${t}/${n}:${kayitsizKalemler(o.no).length}:${o.video ? 1 : 0}:${(o.fbx || []).map((f) => f.ad).join('|')}${o.no === S.sel ? '*' : ''}`; }).join(',');
   const c = $('#liste');
   if (c.dataset.imza === imza) return;
   const odakNo = c.contains(document.activeElement) ? document.activeElement.dataset.no : null; // yeniden çizimde klavye odağı düşmesin
@@ -329,15 +329,22 @@ function renderRay() {
     const tam = n > 0 && t === n;
     const rozet = o.durum !== 'islendi' ? `<span class="s-durum ${o.durum === 'hatali' ? 'd-kritik' : 'd-uyari'}">${DURUM[o.durum] || esc(o.durum)}</span>` : '';
     const kay = kayitsizKalemler(o.no).length ? `<span class="s-kayitsiz" title="Kaydedilmemiş kalem var">!</span>` : '';
-    return `<button class="satir" data-act="sec" data-no="${esc(o.no)}" data-tam="${tam ? 1 : 0}" tabindex="${o.no === sabit ? 0 : -1}" aria-current="${o.no === S.sel}" title="${esc(o.no)} — ${DURUM[o.durum] || ''}${n ? ` — ${t}/${n}` : ''}">
+    const anim = `<i class="s-anim" data-var="${o.video ? 1 : 0}" aria-hidden="true"></i>`;
+    const fbx = o.fbx || [];
+    /* FBX indirme satırın kardeşi: <button> içinde <a> geçersiz. Liste tek Tab durağı kalsın diye tabindex=-1;
+       klavyeyle indirme ayrıntı panelindeki FBX düğmesinden. Birden çok FBX'te hepsi sırayla indirilir. */
+    const indir = !fbx.length ? '' : fbx.length === 1
+      ? `<a class="s-fbx" href="/fbx/${encodeURIComponent(fbx[0].ad)}" download tabindex="-1" aria-label="${esc(o.no)} FBX indir" title="FBX indir — ${esc(fbx[0].ad)} (${boyutStr(fbx[0].boyut)})">${ikon('indir')}</a>`
+      : `<button class="s-fbx" data-act="fbx-hepsi" data-no="${esc(o.no)}" tabindex="-1" aria-label="${esc(o.no)} için ${fbx.length} FBX indir" title="${fbx.length} FBX indir — ${fbx.map((f) => esc(f.ad)).join(', ')}">${ikon('indir')}<span class="s-fbx-say">${fbx.length}</span></button>`;
+    return `<div class="satir-sar${fbx.length ? ' fbx-var' : ''}"><button class="satir" data-act="sec" data-no="${esc(o.no)}" data-tam="${tam ? 1 : 0}" tabindex="${o.no === sabit ? 0 : -1}" aria-current="${o.no === S.sel}" title="${esc(o.no)} — ${DURUM[o.durum] || ''}${n ? ` — ${t}/${n}` : ''} — ${o.video ? 'animasyon var' : 'animasyon yok'}">
       <span class="s-no"><span>${noHtml(o.no)}</span>${tam ? ikon('tik', 'tamam-ikon') : ''}${rozet}${kay}</span>
-      <span class="s-say">${n ? `${t}/${n}` : ''}</span>
+      <span class="s-say">${anim}<span class="s-oran">${n ? `${t}/${n}` : ''}</span></span>
       ${t > 0 ? `<span class="s-bar" style="--p:${t / n}"></span>` : ''}
-    </button>`;
+    </button>${indir}</div>`;
   }).join('');
   if (secDegisti) {
     // scrollIntoView yerine elle kaydırma: Chrome scrollIntoView'u sıralı odak başlangıcı sayar (ilk Tab satıra düşerdi)
-    const a = c.querySelector('[aria-current="true"]');
+    const a = c.querySelector('[aria-current="true"]')?.parentElement; // .satir-sar: offsetTop listeye göre
     if (a) {
       const ust = a.offsetTop - 8, alt = a.offsetTop + a.offsetHeight + 8;
       if (ust < c.scrollTop) c.scrollTop = ust; else if (alt > c.scrollTop + c.clientHeight) c.scrollTop = alt - c.clientHeight;
@@ -1454,6 +1461,7 @@ function aksiyon(act, t) {
   switch (act) {
     case 'yenile': { const s = $('#yenileBtn svg'); if (s && !azHareket()) s.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(360deg)' }], { duration: 600, easing: EASE }); yenile(); break; }
     case 'sec': case 'sec-sonraki': sec(t.dataset.no); break;
+    case 'fbx-hepsi': fbxHepsiniIndir(t.dataset.no); break;
     case 'filtre': S.filtre = t.dataset.f; ilkineDon(); render(); break;
     case 'biten': S.bitenGizle = !S.bitenGizle; depo.yaz('adaptx_biten_gizle', S.bitenGizle ? '1' : '0'); ilkineDon(); render(); break;
     case 'yon': S.yon = -S.yon; $('#liste').scrollTop = 0; render(); break;
@@ -1532,6 +1540,16 @@ if (!document.fullscreenEnabled) $('#ucTam').hidden = true;
 
 const arama = $('#aramaKutu');
 arama.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); arama.blur(); } }); // Enter aramayı kabul eder; odak gövdeye döner (Space işaretlesin)
+/* Bir siparişin tüm FBX'lerini indir: tarayıcı tek tıkta çoklu indirmeyi bir kez sorar; aralık, art arda
+   tıklamaların yutulmasını önler. */
+function fbxHepsiniIndir(no) {
+  const o = S.veri && S.veri.siparisler.find((x) => x.no === no); if (!o) return;
+  (o.fbx || []).forEach((f, i) => setTimeout(() => {
+    const a = document.createElement('a');
+    a.href = '/fbx/' + encodeURIComponent(f.ad); a.download = f.ad;
+    document.body.appendChild(a); a.click(); a.remove();
+  }, i * 400));
+}
 /* Sipariş listesi: tek Tab durağı + ok tuşlarıyla gezinme (roving tabindex). */
 $('#liste').addEventListener('keydown', (e) => {
   if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
